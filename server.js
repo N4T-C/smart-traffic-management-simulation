@@ -12,8 +12,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static files from frontend/web_sim
+app.use(express.static(path.join(__dirname, 'frontend', 'web_sim')));
 
 // API endpoint for traffic data simulation
 app.get('/api/traffic-data', (req, res) => {
@@ -50,7 +50,7 @@ app.get('/api/traffic-data', (req, res) => {
 
 // Catch all handler for SPA
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'frontend', 'web_sim', 'index.html'));
 });
 
 app.listen(PORT, '0.0.0.0', () => {
