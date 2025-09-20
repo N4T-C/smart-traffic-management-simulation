@@ -1,160 +1,630 @@
 class TrafficSimulation {
     constructor() {
         this.isRunning = false;
-        this.simulationInterval = null;
+        this.animationId = null;
         this.canvas = document.getElementById('trafficCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.intersections = [];
+        
+        // Canvas settings
+        this.canvasWidth = 800;
+        this.canvasHeight = 600;
+        this.canvas.width = this.canvasWidth;
+        this.canvas.height = this.canvasHeight;
+        
+        // Intersection settings
+        this.centerX = this.canvasWidth / 2;
+        this.centerY = this.canvasHeight / 2;
+        this.roadWidth = 120;
+        this.laneWidth = 30;
+        
+        // Simulation state
         this.vehicles = [];
+        this.emergencyVehicles = [];
+        this.lastSpawnTime = 0;
+        this.lastEmergencySpawn = 0;
+        this.spawnRate = 2000; // milliseconds between spawns
+        this.emergencyRate = 15000; // emergency vehicle every 15 seconds
+        
+        // Traffic light system
+        this.trafficLights = [
+            { direction: 'North', x: this.centerX - 15, y: this.centerY - 80, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'East', x: this.centerX + 80, y: this.centerY - 15, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'South', x: this.centerX + 15, y: this.centerY + 80, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'West', x: this.centerX - 80, y: this.centerY + 15, state: 'red', timer: 0, carCount: 0 }
+        ];
+        
+        this.currentGreenIndex = 0;
+        this.trafficLights[0].state = 'green';
+        this.lightChangeTime = 0;
+        this.yellowTime = 2000;
+        this.minGreenTime = 4000;
+        this.maxGreenTime = 10000;
+        
+        // Stats
+        this.stats = {
+            totalVehicles: 0,
+            vehiclesPassed: 0,
+            emergencyVehicles: 0,
+            currentWaiting: 0
+        };
         
         this.initializeEventListeners();
-        this.initializeCanvas();
-        this.addLog('Traffic simulation system initialized');
+        this.addLog('🚦 Smart Traffic Management System Ready!');
     }
-
+    
     initializeEventListeners() {
         document.getElementById('startBtn').addEventListener('click', () => this.startSimulation());
         document.getElementById('stopBtn').addEventListener('click', () => this.stopSimulation());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetSimulation());
-    }
-
-    initializeCanvas() {
-        // Set up canvas for high DPI displays
-        const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * dpr;
-        this.canvas.height = rect.height * dpr;
-        this.ctx.scale(dpr, dpr);
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
         
-        this.drawInitialCanvas();
-    }
-
-    drawInitialCanvas() {
-        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        
-        // Draw road grid
-        this.ctx.strokeStyle = '#666';
-        this.ctx.lineWidth = 8;
-        
-        // Horizontal roads
-        for (let i = 1; i <= 3; i++) {
-            const y = (this.canvas.height / 4) * i;
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.canvas.width, y);
-            this.ctx.stroke();
-        }
-        
-        // Vertical roads
-        for (let i = 1; i <= 3; i++) {
-            const x = (this.canvas.width / 4) * i;
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.canvas.height);
-            this.ctx.stroke();
-        }
-        
-        // Draw intersections
-        this.ctx.fillStyle = '#ff6b6b';
-        for (let i = 1; i <= 3; i++) {
-            for (let j = 1; j <= 3; j++) {
-                const x = (this.canvas.width / 4) * i;
-                const y = (this.canvas.height / 4) * j;
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, 15, 0, Math.PI * 2);
-                this.ctx.fill();
+        // Manual controls
+        document.addEventListener('keydown', (e) => {
+            if (!this.isRunning) return;
+            switch(e.key.toLowerCase()) {
+                case ' ':
+                    this.spawnEmergencyVehicle();
+                    break;
+                case '1':
+                    this.spawnVehicle(0); // North
+                    break;
+                case '2':
+                    this.spawnVehicle(1); // East
+                    break;
+                case '3':
+                    this.spawnVehicle(2); // South
+                    break;
+                case '4':
+                    this.spawnVehicle(3); // West
+                    break;
             }
-        }
-        
-        // Add title
-        this.ctx.fillStyle = '#333';
-        this.ctx.font = '16px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText('Traffic Network Visualization', this.canvas.width / 2, 30);
-    }
-
-    async fetchTrafficData() {
-        try {
-            const response = await fetch('/api/traffic-data');
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            this.addLog(`Error fetching traffic data: ${error.message}`, 'error');
-            return null;
-        }
-    }
-
-    updateIntersections(trafficData) {
-        if (!trafficData) return;
-        
-        this.intersections = trafficData.intersections;
-        const container = document.getElementById('intersections');
-        container.innerHTML = '';
-        
-        trafficData.intersections.forEach(intersection => {
-            const card = document.createElement('div');
-            card.className = `intersection-card ${intersection.status}`;
-            
-            card.innerHTML = `
-                <div class="intersection-name">${intersection.name}</div>
-                <div class="intersection-stats">
-                    <span>🚗 Vehicles: ${intersection.vehicles}</span>
-                    <span>⏱️ Wait: ${intersection.avgWaitTime}s</span>
-                </div>
-                <div class="status-indicator status-${intersection.status}">
-                    ${intersection.status}
-                </div>
-            `;
-            
-            container.appendChild(card);
         });
     }
-
-    updateStats(trafficData) {
-        if (!trafficData) return;
+    
+    spawnVehicle(direction) {
+        const directions = ['North', 'East', 'South', 'West'];
+        const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
         
-        const totalVehicles = trafficData.intersections.reduce((sum, int) => sum + int.vehicles, 0);
-        const avgWaitTime = Math.round(
-            trafficData.intersections.reduce((sum, int) => sum + int.avgWaitTime, 0) / 
-            trafficData.intersections.length
-        );
-        const congestedAreas = trafficData.intersections.filter(int => int.status === 'congested').length;
+        let startX, startY, targetX, targetY, angle;
         
-        document.getElementById('totalVehicles').textContent = totalVehicles;
-        document.getElementById('avgWaitTime').textContent = `${avgWaitTime}s`;
-        document.getElementById('congestedAreas').textContent = congestedAreas;
+        switch(direction) {
+            case 0: // North (coming from south)
+                startX = this.centerX - 15;
+                startY = this.canvasHeight + 30;
+                targetX = this.centerX - 15;
+                targetY = -30;
+                angle = -Math.PI / 2;
+                break;
+            case 1: // East (coming from west)
+                startX = -30;
+                startY = this.centerY - 15;
+                targetX = this.canvasWidth + 30;
+                targetY = this.centerY - 15;
+                angle = 0;
+                break;
+            case 2: // South (coming from north)
+                startX = this.centerX + 15;
+                startY = -30;
+                targetX = this.centerX + 15;
+                targetY = this.canvasHeight + 30;
+                angle = Math.PI / 2;
+                break;
+            case 3: // West (coming from east)
+                startX = this.canvasWidth + 30;
+                startY = this.centerY + 15;
+                targetX = -30;
+                targetY = this.centerY + 15;
+                angle = Math.PI;
+                break;
+        }
+        
+        const vehicle = {
+            x: startX,
+            y: startY,
+            targetX: targetX,
+            targetY: targetY,
+            direction: direction,
+            directionName: directions[direction],
+            speed: 1.5 + Math.random() * 0.5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            width: 20,
+            height: 12,
+            angle: angle,
+            stopped: false,
+            isEmergency: false,
+            id: Math.random().toString(36).substr(2, 9)
+        };
+        
+        this.vehicles.push(vehicle);
+        this.stats.totalVehicles++;
+        this.updateStats();
     }
-
-    drawVehicles() {
-        // Simulate vehicle movement on canvas
-        this.drawInitialCanvas();
+    
+    spawnEmergencyVehicle() {
+        const direction = Math.floor(Math.random() * 4);
+        this.spawnVehicle(direction);
         
-        // Draw moving vehicles
-        this.ctx.fillStyle = '#4CAF50';
-        for (let i = 0; i < this.intersections.length; i++) {
-            const intersection = this.intersections[i];
-            if (!intersection) continue;
-            
-            const baseX = (this.canvas.width / 4) * (i + 1);
-            const baseY = (this.canvas.height / 4) * (i + 1);
-            
-            // Draw vehicles around intersection
-            for (let v = 0; v < Math.min(intersection.vehicles, 8); v++) {
-                const angle = (v / 8) * Math.PI * 2;
-                const radius = 30 + (v * 5);
-                const x = baseX + Math.cos(angle) * radius;
-                const y = baseY + Math.sin(angle) * radius;
-                
-                this.ctx.fillStyle = intersection.status === 'congested' ? '#ff6b6b' : '#4CAF50';
-                this.ctx.beginPath();
-                this.ctx.arc(x, y, 4, 0, Math.PI * 2);
-                this.ctx.fill();
+        // Convert last spawned vehicle to emergency
+        const lastVehicle = this.vehicles[this.vehicles.length - 1];
+        lastVehicle.isEmergency = true;
+        lastVehicle.color = '#ff0000';
+        lastVehicle.speed *= 1.3;
+        
+        this.stats.emergencyVehicles++;
+        this.addLog(`🚨 Emergency vehicle approaching from ${lastVehicle.directionName}!`, 'warning');
+        this.updateStats();
+    }
+    
+    updateTrafficLights(deltaTime) {
+        // Count vehicles waiting at each direction
+        this.trafficLights.forEach((light, index) => {
+            light.carCount = this.countVehiclesWaiting(index);
+        });
+        
+        // Check for emergency vehicles
+        const emergencyDirection = this.checkEmergencyVehicles();
+        if (emergencyDirection !== -1 && this.currentGreenIndex !== emergencyDirection) {
+            this.addLog(`🚨 Emergency override: switching to ${this.trafficLights[emergencyDirection].direction}`, 'warning');
+            this.switchLight(emergencyDirection);
+            return;
+        }
+        
+        // Update current light timer
+        this.lightChangeTime += deltaTime;
+        
+        // Dynamic green time based on vehicle count
+        const currentLight = this.trafficLights[this.currentGreenIndex];
+        let greenDuration = this.minGreenTime + (currentLight.carCount * 1000);
+        greenDuration = Math.min(greenDuration, this.maxGreenTime);
+        
+        // Check if we should switch to yellow
+        if (currentLight.state === 'green' && this.lightChangeTime >= greenDuration) {
+            currentLight.state = 'yellow';
+            currentLight.timer = 0;
+            this.addLog(`💛 ${currentLight.direction} switching to yellow`);
+        }
+        
+        // Check if we should switch to next direction
+        if (currentLight.state === 'yellow') {
+            currentLight.timer += deltaTime;
+            if (currentLight.timer >= this.yellowTime) {
+                this.switchToNextDirection();
             }
         }
     }
-
+    
+    countVehiclesWaiting(direction) {
+        let count = 0;
+        this.vehicles.forEach(vehicle => {
+            if (vehicle.direction === direction && vehicle.stopped) {
+                count++;
+            }
+        });
+        return count;
+    }
+    
+    checkEmergencyVehicles() {
+        for (let vehicle of this.vehicles) {
+            if (vehicle.isEmergency && this.isVehicleNearIntersection(vehicle)) {
+                return vehicle.direction;
+            }
+        }
+        return -1;
+    }
+    
+    isVehicleNearIntersection(vehicle) {
+        const distance = Math.sqrt(
+            Math.pow(vehicle.x - this.centerX, 2) + 
+            Math.pow(vehicle.y - this.centerY, 2)
+        );
+        return distance < 100;
+    }
+    
+    switchLight(newDirection) {
+        // Set all lights to red
+        this.trafficLights.forEach(light => light.state = 'red');
+        
+        // Set new direction to green
+        this.trafficLights[newDirection].state = 'green';
+        this.currentGreenIndex = newDirection;
+        this.lightChangeTime = 0;
+        
+        this.addLog(`💚 ${this.trafficLights[newDirection].direction} light is now GREEN`);
+    }
+    
+    switchToNextDirection() {
+        this.trafficLights[this.currentGreenIndex].state = 'red';
+        
+        // Find next direction with most vehicles or cycle through
+        let nextDirection = (this.currentGreenIndex + 1) % 4;
+        let maxCars = 0;
+        let bestDirection = nextDirection;
+        
+        for (let i = 0; i < 4; i++) {
+            if (this.trafficLights[i].carCount > maxCars) {
+                maxCars = this.trafficLights[i].carCount;
+                bestDirection = i;
+            }
+        }
+        
+        // Use best direction if it has waiting vehicles, otherwise cycle
+        this.currentGreenIndex = maxCars > 0 ? bestDirection : nextDirection;
+        this.trafficLights[this.currentGreenIndex].state = 'green';
+        this.lightChangeTime = 0;
+        
+        this.addLog(`💚 Switched to ${this.trafficLights[this.currentGreenIndex].direction} (${maxCars} vehicles waiting)`);
+    }
+    
+    updateVehicles(deltaTime) {
+        // Use reverse iteration to safely remove vehicles
+        for (let i = this.vehicles.length - 1; i >= 0; i--) {
+            const vehicle = this.vehicles[i];
+            
+            // Check if vehicle should stop at red light
+            const light = this.trafficLights[vehicle.direction];
+            const shouldStop = this.shouldVehicleStop(vehicle, light);
+            
+            vehicle.stopped = shouldStop;
+            
+            if (!shouldStop) {
+                // Move vehicle
+                const dx = vehicle.targetX - vehicle.x;
+                const dy = vehicle.targetY - vehicle.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 5) {
+                    vehicle.x += (dx / distance) * vehicle.speed;
+                    vehicle.y += (dy / distance) * vehicle.speed;
+                } else {
+                    // Vehicle has reached destination - safe to remove
+                    this.vehicles.splice(i, 1);
+                    this.stats.vehiclesPassed++;
+                }
+            }
+        }
+        
+        // Update waiting count
+        this.stats.currentWaiting = this.vehicles.filter(v => v.stopped).length;
+        this.updateStats();
+    }
+    
+    shouldVehicleStop(vehicle, light) {
+        if (light.state === 'green') return false;
+        if (vehicle.isEmergency) return false; // Emergency vehicles don't stop
+        
+        // Check if vehicle is approaching intersection
+        let stopLine;
+        switch (vehicle.direction) {
+            case 0: // North
+                stopLine = this.centerY + 40;
+                return vehicle.y > stopLine && vehicle.y < stopLine + 80;
+            case 1: // East
+                stopLine = this.centerX - 40;
+                return vehicle.x < stopLine && vehicle.x > stopLine - 80;
+            case 2: // South
+                stopLine = this.centerY - 40;
+                return vehicle.y < stopLine && vehicle.y > stopLine - 80;
+            case 3: // West
+                stopLine = this.centerX + 40;
+                return vehicle.x > stopLine && vehicle.x < stopLine + 80;
+        }
+        return false;
+    }
+    
+    draw() {
+        // Clear canvas
+        this.ctx.fillStyle = '#2c3e50';
+        this.ctx.fillRect(0, 0, this.canvasWidth, this.canvasHeight);
+        
+        // Draw roads
+        this.drawRoads();
+        
+        // Draw traffic lights
+        this.drawTrafficLights();
+        
+        // Draw vehicles
+        this.drawVehicles();
+        
+        // Draw UI elements
+        this.drawUI();
+    }
+    
+    drawRoads() {
+        this.ctx.fillStyle = '#34495e';
+        
+        // Horizontal road
+        this.ctx.fillRect(0, this.centerY - this.roadWidth/2, this.canvasWidth, this.roadWidth);
+        
+        // Vertical road
+        this.ctx.fillRect(this.centerX - this.roadWidth/2, 0, this.roadWidth, this.canvasHeight);
+        
+        // Draw lane markings
+        this.ctx.strokeStyle = '#f39c12';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([10, 10]);
+        
+        // Horizontal lane divider
+        this.ctx.beginPath();
+        this.ctx.moveTo(0, this.centerY);
+        this.ctx.lineTo(this.canvasWidth, this.centerY);
+        this.ctx.stroke();
+        
+        // Vertical lane divider
+        this.ctx.beginPath();
+        this.ctx.moveTo(this.centerX, 0);
+        this.ctx.lineTo(this.centerX, this.canvasHeight);
+        this.ctx.stroke();
+        
+        this.ctx.setLineDash([]); // Reset line dash
+        
+        // Draw intersection
+        this.ctx.fillStyle = '#95a5a6';
+        this.ctx.fillRect(
+            this.centerX - this.roadWidth/2, 
+            this.centerY - this.roadWidth/2, 
+            this.roadWidth, 
+            this.roadWidth
+        );
+    }
+    
+    drawTrafficLights() {
+        this.trafficLights.forEach((light, index) => {
+            // Traffic light pole
+            this.ctx.fillStyle = '#2c3e50';
+            this.ctx.fillRect(light.x - 5, light.y - 30, 10, 60);
+            
+            // Traffic light box
+            this.ctx.fillStyle = '#34495e';
+            this.ctx.fillRect(light.x - 12, light.y - 18, 24, 36);
+            
+            // Light circles
+            const lightColors = {
+                'red': '#e74c3c',
+                'yellow': '#f1c40f',
+                'green': '#2ecc71'
+            };
+            
+            // Red light
+            this.ctx.fillStyle = light.state === 'red' ? lightColors.red : '#7f8c8d';
+            this.ctx.beginPath();
+            this.ctx.arc(light.x, light.y - 10, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Yellow light
+            this.ctx.fillStyle = light.state === 'yellow' ? lightColors.yellow : '#7f8c8d';
+            this.ctx.beginPath();
+            this.ctx.arc(light.x, light.y, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Green light
+            this.ctx.fillStyle = light.state === 'green' ? lightColors.green : '#7f8c8d';
+            this.ctx.beginPath();
+            this.ctx.arc(light.x, light.y + 10, 6, 0, Math.PI * 2);
+            this.ctx.fill();
+            
+            // Highlight current green light with glow effect
+            if (light.state === 'green') {
+                this.ctx.shadowColor = '#2ecc71';
+                this.ctx.shadowBlur = 15;
+                this.ctx.beginPath();
+                this.ctx.arc(light.x, light.y + 10, 8, 0, Math.PI * 2);
+                this.ctx.strokeStyle = '#2ecc71';
+                this.ctx.lineWidth = 3;
+                this.ctx.stroke();
+                this.ctx.shadowBlur = 0;
+            }
+            
+            // Timer display
+            this.drawTimer(light, index);
+            
+            // Direction label
+            this.ctx.fillStyle = '#ecf0f1';
+            this.ctx.font = 'bold 12px Arial';
+            this.ctx.textAlign = 'center';
+            this.ctx.fillText(light.direction, light.x, light.y - 40);
+            
+            // Vehicle count
+            this.ctx.fillStyle = '#3498db';
+            this.ctx.font = '10px Arial';
+            this.ctx.fillText(`🚗 ${light.carCount}`, light.x, light.y + 35);
+        });
+    }
+    
+    drawTimer(light, index) {
+        let timeRemaining;
+        if (light.state === 'green') {
+            const greenDuration = this.minGreenTime + (light.carCount * 1000);
+            timeRemaining = Math.max(0, greenDuration - this.lightChangeTime);
+        } else if (light.state === 'yellow') {
+            timeRemaining = Math.max(0, this.yellowTime - light.timer);
+        } else {
+            timeRemaining = 0;
+        }
+        
+        const seconds = Math.ceil(timeRemaining / 1000);
+        
+        // Timer background
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(light.x - 15, light.y - 50, 30, 15);
+        
+        // Timer text
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${seconds}s`, light.x, light.y - 40);
+    }
+    
+    drawVehicles() {
+        this.vehicles.forEach(vehicle => {
+            this.ctx.save();
+            this.ctx.translate(vehicle.x, vehicle.y);
+            this.ctx.rotate(vehicle.angle);
+            
+            // Vehicle body
+            this.ctx.fillStyle = vehicle.color;
+            this.ctx.fillRect(-vehicle.width/2, -vehicle.height/2, vehicle.width, vehicle.height);
+            
+            // Vehicle border
+            this.ctx.strokeStyle = '#2c3e50';
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(-vehicle.width/2, -vehicle.height/2, vehicle.width, vehicle.height);
+            
+            // Emergency vehicle effects
+            if (vehicle.isEmergency) {
+                // Flashing lights
+                const flash = Math.floor(Date.now() / 200) % 2;
+                this.ctx.fillStyle = flash ? '#ff0000' : '#0000ff';
+                this.ctx.fillRect(-vehicle.width/2 - 2, -vehicle.height/2 - 2, 4, 4);
+                this.ctx.fillRect(vehicle.width/2 - 2, -vehicle.height/2 - 2, 4, 4);
+                
+                // Emergency label
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.font = 'bold 8px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText('EMG', 0, 2);
+            }
+            
+            this.ctx.restore();
+        });
+    }
+    
+    drawUI() {
+        // Current green indicator
+        const currentLight = this.trafficLights[this.currentGreenIndex];
+        this.ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
+        this.ctx.fillRect(10, 10, 200, 40);
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.font = 'bold 16px Arial';
+        this.ctx.textAlign = 'left';
+        this.ctx.fillText(`🟢 GREEN: ${currentLight.direction}`, 20, 35);
+        
+        // Instructions
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        this.ctx.fillRect(10, this.canvasHeight - 80, 300, 70);
+        this.ctx.fillStyle = '#ecf0f1';
+        this.ctx.font = '12px Arial';
+        this.ctx.fillText('Controls:', 20, this.canvasHeight - 60);
+        this.ctx.fillText('SPACE - Emergency Vehicle', 20, this.canvasHeight - 45);
+        this.ctx.fillText('1-4 - Spawn Vehicle (N/E/S/W)', 20, this.canvasHeight - 30);
+        this.ctx.fillText('Auto-spawn enabled during simulation', 20, this.canvasHeight - 15);
+    }
+    
+    updateStats() {
+        document.getElementById('totalVehicles').textContent = this.stats.totalVehicles;
+        document.getElementById('avgWaitTime').textContent = `${this.stats.currentWaiting}`;
+        document.getElementById('congestedAreas').textContent = this.stats.emergencyVehicles;
+        
+        // Update additional stats in intersections area
+        const container = document.getElementById('intersections');
+        container.innerHTML = `
+            <div class="stat-summary">
+                <h3>🚦 Live Traffic Status</h3>
+                <div class="traffic-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Vehicles Passed:</span>
+                        <span class="stat-value">${this.stats.vehiclesPassed}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Currently Waiting:</span>
+                        <span class="stat-value">${this.stats.currentWaiting}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Emergency Calls:</span>
+                        <span class="stat-value">${this.stats.emergencyVehicles}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Active Green:</span>
+                        <span class="stat-value green-indicator">${this.trafficLights[this.currentGreenIndex].direction}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    gameLoop(currentTime) {
+        if (!this.isRunning) return;
+        
+        const deltaTime = currentTime - (this.lastTime || currentTime);
+        this.lastTime = currentTime;
+        
+        // Auto-spawn vehicles
+        if (currentTime - this.lastSpawnTime > this.spawnRate) {
+            const direction = Math.floor(Math.random() * 4);
+            this.spawnVehicle(direction);
+            this.lastSpawnTime = currentTime;
+        }
+        
+        // Auto-spawn emergency vehicles
+        if (currentTime - this.lastEmergencySpawn > this.emergencyRate) {
+            this.spawnEmergencyVehicle();
+            this.lastEmergencySpawn = currentTime;
+        }
+        
+        // Update simulation
+        this.updateTrafficLights(deltaTime);
+        this.updateVehicles(deltaTime);
+        
+        // Draw everything
+        this.draw();
+        
+        this.animationId = requestAnimationFrame((time) => this.gameLoop(time));
+    }
+    
+    startSimulation() {
+        if (this.isRunning) return;
+        
+        this.isRunning = true;
+        document.getElementById('startBtn').disabled = true;
+        document.getElementById('stopBtn').disabled = false;
+        
+        this.addLog('🚀 Starting smart traffic simulation...', 'success');
+        this.lastTime = performance.now();
+        this.gameLoop(this.lastTime);
+    }
+    
+    stopSimulation() {
+        if (!this.isRunning) return;
+        
+        this.isRunning = false;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+        }
+        
+        this.addLog('⏹️ Traffic simulation stopped', 'info');
+    }
+    
+    resetSimulation() {
+        this.stopSimulation();
+        
+        // Reset all state
+        this.vehicles = [];
+        this.emergencyVehicles = [];
+        this.stats = {
+            totalVehicles: 0,
+            vehiclesPassed: 0,
+            emergencyVehicles: 0,
+            currentWaiting: 0
+        };
+        
+        // Reset traffic lights
+        this.trafficLights.forEach((light, index) => {
+            light.state = index === 0 ? 'green' : 'red';
+            light.timer = 0;
+            light.carCount = 0;
+        });
+        this.currentGreenIndex = 0;
+        this.lightChangeTime = 0;
+        
+        this.updateStats();
+        this.draw();
+        
+        document.getElementById('logContainer').innerHTML = '';
+        this.addLog('🔄 System reset completed', 'success');
+    }
+    
     addLog(message, type = 'info') {
         const logContainer = document.getElementById('logContainer');
         const timestamp = new Date().toLocaleTimeString();
@@ -163,90 +633,32 @@ class TrafficSimulation {
         let prefix = '';
         switch (type) {
             case 'error':
-                prefix = '❌ ERROR';
+                prefix = '❌';
                 break;
             case 'warning':
-                prefix = '⚠️ WARN';
+                prefix = '⚠️';
                 break;
             case 'success':
-                prefix = '✅ SUCCESS';
+                prefix = '✅';
                 break;
             default:
-                prefix = 'ℹ️ INFO';
+                prefix = 'ℹ️';
         }
         
-        logEntry.textContent = `[${timestamp}] ${prefix}: ${message}`;
+        logEntry.innerHTML = `<span class="log-time">[${timestamp}]</span> ${prefix} ${message}`;
+        logEntry.className = `log-entry log-${type}`;
         logContainer.appendChild(logEntry);
         logContainer.scrollTop = logContainer.scrollHeight;
         
-        // Keep only last 20 log entries
-        while (logContainer.children.length > 20) {
+        // Keep only last 15 log entries
+        while (logContainer.children.length > 15) {
             logContainer.removeChild(logContainer.firstChild);
         }
-    }
-
-    async startSimulation() {
-        if (this.isRunning) return;
-        
-        this.isRunning = true;
-        document.getElementById('startBtn').disabled = true;
-        document.getElementById('stopBtn').disabled = false;
-        
-        this.addLog('Starting traffic simulation...', 'success');
-        
-        this.simulationInterval = setInterval(async () => {
-            const trafficData = await this.fetchTrafficData();
-            if (trafficData) {
-                this.updateIntersections(trafficData);
-                this.updateStats(trafficData);
-                this.drawVehicles();
-                
-                // Log significant events
-                const congestedIntersections = trafficData.intersections.filter(int => int.status === 'congested');
-                if (congestedIntersections.length > 0) {
-                    this.addLog(`Congestion detected at ${congestedIntersections.length} intersection(s)`, 'warning');
-                }
-            }
-        }, 2000);
-    }
-
-    stopSimulation() {
-        if (!this.isRunning) return;
-        
-        this.isRunning = false;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('stopBtn').disabled = true;
-        
-        if (this.simulationInterval) {
-            clearInterval(this.simulationInterval);
-            this.simulationInterval = null;
-        }
-        
-        this.addLog('Traffic simulation stopped', 'info');
-    }
-
-    resetSimulation() {
-        this.stopSimulation();
-        
-        // Reset all displays
-        document.getElementById('totalVehicles').textContent = '0';
-        document.getElementById('avgWaitTime').textContent = '0s';
-        document.getElementById('congestedAreas').textContent = '0';
-        
-        // Clear intersections
-        document.getElementById('intersections').innerHTML = '';
-        
-        // Reset canvas
-        this.drawInitialCanvas();
-        
-        // Clear logs except initialization
-        document.getElementById('logContainer').innerHTML = '<p>System reset. Ready to start simulation.</p>';
-        
-        this.addLog('System reset completed', 'success');
     }
 }
 
 // Initialize the simulation when page loads
 document.addEventListener('DOMContentLoaded', () => {
-    new TrafficSimulation();
+    const simulation = new TrafficSimulation();
+    simulation.draw(); // Initial draw
 });
