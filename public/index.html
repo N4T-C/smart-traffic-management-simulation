@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Management Simulation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚦 Smart Traffic Management Simulation</h1>
+            <p>Real-time traffic monitoring and optimization system</p>
+        </header>
+
+        <div class="dashboard">
+            <div class="controls">
+                <button id="startBtn" class="btn btn-primary">Start Simulation</button>
+                <button id="stopBtn" class="btn btn-secondary" disabled>Stop Simulation</button>
+                <button id="resetBtn" class="btn btn-tertiary">Reset</button>
+            </div>
+
+            <div class="stats-overview">
+                <div class="stat-card">
+                    <h3>Total Intersections</h3>
+                    <span id="totalIntersections">3</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Active Vehicles</h3>
+                    <span id="totalVehicles">0</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Avg Wait Time</h3>
+                    <span id="avgWaitTime">0s</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Congested Areas</h3>
+                    <span id="congestedAreas">0</span>
+                </div>
+            </div>
+
+            <div class="traffic-grid">
+                <h2>Traffic Intersections</h2>
+                <div id="intersections" class="intersections-container">
+                    <!-- Intersections will be dynamically populated -->
+                </div>
+            </div>
+
+            <div class="simulation-area">
+                <h2>Traffic Flow Visualization</h2>
+                <canvas id="trafficCanvas" width="800" height="400"></canvas>
+            </div>
+
+            <div class="logs">
+                <h3>System Logs</h3>
+                <div id="logContainer" class="log-container">
+                    <p>System initialized. Ready to start simulation.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
