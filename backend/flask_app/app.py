@@ -334,8 +334,8 @@ class TrafficSimulation:
         
         # Instructions
         instructions = [
-            "SPACE: Spawn emergency vehicle",
-            "1-4: Spawn vehicle in lane",
+            "A: Spawn emergency vehicle",
+            "1-4: Spawn vehicle in lane (N/E/S/W)",
             "ESC: Exit"
         ]
         
@@ -351,7 +351,7 @@ class TrafficSimulation:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     return False
-                elif event.key == pygame.K_SPACE:
+                elif event.key == pygame.K_a:
                     # Spawn emergency vehicle in random lane
                     direction = random.choice(list(Direction))
                     self.spawn_emergency_vehicle(direction)

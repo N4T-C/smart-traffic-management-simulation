@@ -135,25 +135,45 @@ class TrafficScheduler:
         return False
     
     def _handle_emergency(self, state: IntersectionState) -> ActionPlan:
-        """Generate emergency preemption plan"""
-        # Find the most urgent emergency vehicle
-        urgent_ev = min(state.emergency, 
-                       key=lambda ev: (ev.time_to_intersection, ev.priority))
+        """Generate emergency preemption plan using FCFS for multiple emergencies"""
+        # Group emergency vehicles by direction to avoid conflicts
+        emergency_by_direction = {}
+        for ev in state.emergency:
+            if ev.direction not in emergency_by_direction:
+                emergency_by_direction[ev.direction] = []
+            emergency_by_direction[ev.direction].append(ev)
         
-        target_phase = self._get_green_phase_for_direction(urgent_ev.direction)
+        # If multiple directions have emergency vehicles, use FCFS based on arrival time
+        if len(emergency_by_direction) > 1:
+            # Find the emergency vehicle that will arrive first (FCFS)
+            earliest_ev = min(state.emergency, key=lambda ev: ev.time_to_intersection)
+            target_direction = earliest_ev.direction
+            
+            if self.policy_params['debug']:
+                self.logger.info(f"Multiple emergencies detected. Using FCFS: {target_direction} arrives in {earliest_ev.time_to_intersection}s")
+        else:
+            # Single direction emergency - use priority-based selection
+            urgent_ev = min(state.emergency, 
+                           key=lambda ev: (ev.time_to_intersection, ev.priority))
+            target_direction = urgent_ev.direction
+        
+        target_phase = self._get_green_phase_for_direction(target_direction)
         plan = []
         
         # If we need to switch phases, add transition phases
         if state.current_phase != target_phase and state.current_phase != 'all_red':
             plan.extend(self._schedule_transition_with_yellow(state.current_phase, target_phase))
         
-        # Add green phase for emergency vehicle
-        emergency_duration = min(self.policy_params['emergency_clear_duration'], 
+        # Calculate duration based on number of emergency vehicles in this direction
+        emergency_count = len(emergency_by_direction.get(target_direction, []))
+        base_duration = self.policy_params['emergency_clear_duration']
+        emergency_duration = min(base_duration + (emergency_count - 1) * 5, 
                                self.policy_params['max_green'])
+        
         plan.append(Phase(target_phase, emergency_duration, preemptable=False))
         
         if self.policy_params['debug']:
-            self.logger.info(f"Emergency preemption: {urgent_ev.direction} for {emergency_duration}s")
+            self.logger.info(f"Emergency preemption: {target_direction} for {emergency_duration}s ({emergency_count} vehicles)")
         
         return plan
     
