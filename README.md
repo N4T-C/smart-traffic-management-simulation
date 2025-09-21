@@ -1,4 +1,3 @@
-
 # Smart Traffic Management Simulation
 
 A comprehensive AI-powered traffic control system developed for the Smart India Hackathon. This project demonstrates intelligent traffic management through real-time vehicle detection, machine learning-based optimization, and dynamic traffic light control using computer vision, reinforcement learning, and web-based visualization.
@@ -140,6 +139,27 @@ npm run start
 npm run dev
 ```
 
+### Method 4: Testing the Scheduling System
+```bash
+# Run the scheduling algorithm tests
+cd backend/flask_app
+python -m pytest ../../tests/test_schedulers.py -v
+
+# Test individual scheduling algorithms
+python -c "
+from schedulers import TrafficScheduler, IntersectionState, SchedulingPolicy
+scheduler = TrafficScheduler()
+state = IntersectionState(
+    queues={'N': 5, 'E': 3, 'S': 2, 'W': 4},
+    waiting_times={'N': [10,15,20,25,30], 'E': [5,8,12], 'S': [7,9], 'W': [18,22,25,28]},
+    arrival_rates={'N': 0.1, 'E': 0.05, 'S': 0.03, 'W': 0.08},
+    emergency=[], current_phase='NS_green', sim_time=100.0
+)
+plan = scheduler.schedule(state, SchedulingPolicy.META)
+print('Generated schedule:', [f'{p.phase}: {p.duration}s' for p in plan])
+"
+```
+
 ## 🎯 Usage Instructions
 
 ### Web Interface
@@ -251,3 +271,13 @@ For questions and support, please refer to the documentation in the `docs/` dire
 
 ---
 **Smart India Hackathon 2024** | AI-Powered Traffic Management Solution
+
+**Languages Used**:
+- Python
+- JavaScript
+- HTML
+- CSS
+
+**Packages Used**:
+- **Python**: pygame, flask, numpy, opencv-python, tensorflow (for potential future ML integration), pytest
+- **JavaScript**: express, socket.io, react (for frontend framework, if applicable)
