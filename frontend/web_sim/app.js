@@ -61,9 +61,6 @@ class TrafficSimulation {
         document.addEventListener('keydown', (e) => {
             if (!this.isRunning) return;
             switch(e.key.toLowerCase()) {
-                case 'a': // Changed from space to 'a' for emergency vehicle spawn
-                    this.spawnEmergencyVehicle();
-                    break;
                 case '1':
                     this.spawnVehicle(0); // North
                     break;
@@ -75,6 +72,18 @@ class TrafficSimulation {
                     break;
                 case '4':
                     this.spawnVehicle(3); // West
+                    break;
+                case '5':
+                    this.spawnEmergencyVehicle(0); // Emergency from North
+                    break;
+                case '6':
+                    this.spawnEmergencyVehicle(1); // Emergency from East
+                    break;
+                case '7':
+                    this.spawnEmergencyVehicle(2); // Emergency from South
+                    break;
+                case '8':
+                    this.spawnEmergencyVehicle(3); // Emergency from West
                     break;
             }
         });
@@ -139,8 +148,12 @@ class TrafficSimulation {
         this.updateStats();
     }
 
-    spawnEmergencyVehicle() {
-        const direction = Math.floor(Math.random() * 4);
+    spawnEmergencyVehicle(direction = null) {
+        // If no direction specified, choose random
+        if (direction === null) {
+            direction = Math.floor(Math.random() * 4);
+        }
+        
         this.spawnVehicle(direction);
 
         // Convert last spawned vehicle to emergency
@@ -416,14 +429,14 @@ class TrafficSimulation {
             // Timer display
             this.drawTimer(light, index);
 
-            // Direction label with improved styling
+            // Direction label with improved styling - moved higher to avoid timer collision
             this.ctx.fillStyle = '#ffffff';
             this.ctx.font = 'bold 14px Arial';
             this.ctx.textAlign = 'center';
             this.ctx.strokeStyle = '#2c3e50';
             this.ctx.lineWidth = 2;
-            this.ctx.strokeText(light.direction.toUpperCase(), light.x, light.y - 45);
-            this.ctx.fillText(light.direction.toUpperCase(), light.x, light.y - 45);
+            this.ctx.strokeText(light.direction.toUpperCase(), light.x, light.y - 65);
+            this.ctx.fillText(light.direction.toUpperCase(), light.x, light.y - 65);
 
             // Vehicle count
             this.ctx.fillStyle = '#3498db';
@@ -506,7 +519,7 @@ class TrafficSimulation {
         this.ctx.fillStyle = '#ecf0f1';
         this.ctx.font = '12px Arial';
         this.ctx.fillText('Controls:', 20, this.canvasHeight - 60);
-        this.ctx.fillText('A - Emergency Vehicle', 20, this.canvasHeight - 45);
+        this.ctx.fillText('5-8 - Emergency Vehicle (N/E/S/W)', 20, this.canvasHeight - 45);
         this.ctx.fillText('1-4 - Spawn Vehicle (N/E/S/W)', 20, this.canvasHeight - 30);
         this.ctx.fillText('Auto-spawn enabled during simulation', 20, this.canvasHeight - 15);
     }
