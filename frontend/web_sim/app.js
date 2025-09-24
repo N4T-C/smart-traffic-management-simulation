@@ -55,20 +55,25 @@ class TrafficSimulation {
             }
         };
 
-        // Traffic light system
+        // Traffic light system with turning phases
         this.trafficLights = [
-            { direction: 'North', x: this.centerX - 15, y: this.centerY - 80, state: 'red', timer: 0, carCount: 0 },
-            { direction: 'East', x: this.centerX + 80, y: this.centerY - 15, state: 'red', timer: 0, carCount: 0 },
-            { direction: 'South', x: this.centerX + 15, y: this.centerY + 80, state: 'red', timer: 0, carCount: 0 },
-            { direction: 'West', x: this.centerX - 80, y: this.centerY + 15, state: 'red', timer: 0, carCount: 0 }
+            { direction: 'North', x: this.centerX - 15, y: this.centerY - 80, state: 'red', timer: 0, carCount: 0, leftArrow: 'red', rightArrow: 'red' },
+            { direction: 'East', x: this.centerX + 80, y: this.centerY - 15, state: 'red', timer: 0, carCount: 0, leftArrow: 'red', rightArrow: 'red' },
+            { direction: 'South', x: this.centerX + 15, y: this.centerY + 80, state: 'red', timer: 0, carCount: 0, leftArrow: 'red', rightArrow: 'red' },
+            { direction: 'West', x: this.centerX - 80, y: this.centerY + 15, state: 'red', timer: 0, carCount: 0, leftArrow: 'red', rightArrow: 'red' }
         ];
 
         this.currentGreenIndex = 0;
         this.trafficLights[0].state = 'green';
+        this.trafficLights[0].leftArrow = 'green'; // Allow left turns when main light is green
         this.lightChangeTime = 0;
         this.yellowTime = 2000;
-        this.minGreenTime = 4000;
-        this.maxGreenTime = 10000;
+        this.minGreenTime = 6000; // Increased for turning vehicles
+        this.maxGreenTime = 15000;
+
+        // Phase management for conflict-free turning
+        this.currentPhase = 'NS_straight'; // NS_straight, EW_straight, NS_left, EW_left
+        this.phaseSequence = ['NS_straight', 'NS_left', 'EW_straight', 'EW_left'];
 
         // Stats
         this.stats = {
@@ -129,44 +134,108 @@ class TrafficSimulation {
         const directions = ['North', 'East', 'South', 'West'];
         const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
 
-        let startX, startY, targetX, targetY, angle;
+        // Determine turn intention: 0=straight, 1=left, 2=right
+        const turnProbability = Math.random();
+        let turnType = 0; // straight
+        if (turnProbability < 0.25) turnType = 1; // left turn
+        else if (turnProbability < 0.4) turnType = 2; // right turn
+
+        let startX, startY, angle;
+        let waypoints = [];
 
         switch(direction) {
             case 0: // North (coming from south)
                 startX = this.centerX - 15;
                 startY = this.canvasHeight + this.findSafeSpawnPosition(direction);
-                targetX = this.centerX - 15;
-                targetY = -30;
                 angle = -Math.PI / 2;
+                
+                if (turnType === 1) { // Left turn (south to west)
+                    waypoints = [
+                        { x: this.centerX - 15, y: this.centerY + 20 },
+                        { x: this.centerX - 40, y: this.centerY + 15 },
+                        { x: -30, y: this.centerY + 15 }
+                    ];
+                } else if (turnType === 2) { // Right turn (south to east)
+                    waypoints = [
+                        { x: this.centerX - 15, y: this.centerY - 20 },
+                        { x: this.centerX + 40, y: this.centerY - 15 },
+                        { x: this.canvasWidth + 30, y: this.centerY - 15 }
+                    ];
+                } else { // Straight
+                    waypoints = [{ x: this.centerX - 15, y: -30 }];
+                }
                 break;
+
             case 1: // East (coming from west)
                 startX = -30 - this.findSafeSpawnPosition(direction);
                 startY = this.centerY - 15;
-                targetX = this.canvasWidth + 30;
-                targetY = this.centerY - 15;
                 angle = 0;
+                
+                if (turnType === 1) { // Left turn (west to north)
+                    waypoints = [
+                        { x: this.centerX - 20, y: this.centerY - 15 },
+                        { x: this.centerX - 15, y: this.centerY - 40 },
+                        { x: this.centerX - 15, y: -30 }
+                    ];
+                } else if (turnType === 2) { // Right turn (west to south)
+                    waypoints = [
+                        { x: this.centerX + 20, y: this.centerY - 15 },
+                        { x: this.centerX + 15, y: this.centerY + 40 },
+                        { x: this.centerX + 15, y: this.canvasHeight + 30 }
+                    ];
+                } else { // Straight
+                    waypoints = [{ x: this.canvasWidth + 30, y: this.centerY - 15 }];
+                }
                 break;
+
             case 2: // South (coming from north)
                 startX = this.centerX + 15;
                 startY = -30 - this.findSafeSpawnPosition(direction);
-                targetX = this.centerX + 15;
-                targetY = this.canvasHeight + 30;
                 angle = Math.PI / 2;
+                
+                if (turnType === 1) { // Left turn (north to east)
+                    waypoints = [
+                        { x: this.centerX + 15, y: this.centerY - 20 },
+                        { x: this.centerX + 40, y: this.centerY - 15 },
+                        { x: this.canvasWidth + 30, y: this.centerY - 15 }
+                    ];
+                } else if (turnType === 2) { // Right turn (north to west)
+                    waypoints = [
+                        { x: this.centerX + 15, y: this.centerY + 20 },
+                        { x: this.centerX - 40, y: this.centerY + 15 },
+                        { x: -30, y: this.centerY + 15 }
+                    ];
+                } else { // Straight
+                    waypoints = [{ x: this.centerX + 15, y: this.canvasHeight + 30 }];
+                }
                 break;
+
             case 3: // West (coming from east)
                 startX = this.canvasWidth + 30 + this.findSafeSpawnPosition(direction);
                 startY = this.centerY + 15;
-                targetX = -30;
-                targetY = this.centerY + 15;
                 angle = Math.PI;
+                
+                if (turnType === 1) { // Left turn (east to south)
+                    waypoints = [
+                        { x: this.centerX + 20, y: this.centerY + 15 },
+                        { x: this.centerX + 15, y: this.centerY + 40 },
+                        { x: this.centerX + 15, y: this.canvasHeight + 30 }
+                    ];
+                } else if (turnType === 2) { // Right turn (east to north)
+                    waypoints = [
+                        { x: this.centerX - 20, y: this.centerY + 15 },
+                        { x: this.centerX - 15, y: this.centerY - 40 },
+                        { x: this.centerX - 15, y: -30 }
+                    ];
+                } else { // Straight
+                    waypoints = [{ x: -30, y: this.centerY + 15 }];
+                }
                 break;
         }
 
         const vehicle = {
             x: startX,
             y: startY,
-            targetX: targetX,
-            targetY: targetY,
             direction: direction,
             directionName: directions[direction],
             speed: 1.5 + Math.random() * 0.5,
@@ -176,7 +245,12 @@ class TrafficSimulation {
             angle: angle,
             stopped: false,
             isEmergency: false,
-            id: Math.random().toString(36).substr(2, 9)
+            id: Math.random().toString(36).substr(2, 9),
+            turnType: turnType, // 0=straight, 1=left, 2=right
+            waypoints: waypoints,
+            currentWaypoint: 0,
+            inIntersection: false,
+            turnSignal: turnType > 0 ? (turnType === 1 ? 'left' : 'right') : null
         };
 
         this.vehicles.push(vehicle);
@@ -225,7 +299,7 @@ class TrafficSimulation {
     }
 
     updateTrafficLights(deltaTime) {
-        // Count vehicles waiting at each direction
+        // Count vehicles waiting at each direction (by turn type)
         this.trafficLights.forEach((light, index) => {
             light.carCount = this.countVehiclesWaiting(index);
         });
@@ -234,32 +308,70 @@ class TrafficSimulation {
         const emergencyDirection = this.checkEmergencyVehicles();
         if (emergencyDirection !== -1 && this.currentGreenIndex !== emergencyDirection) {
             this.addLog(`🚨 Emergency override: switching to ${this.trafficLights[emergencyDirection].direction}`, 'warning');
-            this.switchLight(emergencyDirection);
+            this.switchToEmergencyPhase(emergencyDirection);
             return;
         }
 
-        // Update current light timer
+        // Update current phase timer
         this.lightChangeTime += deltaTime;
 
-        // Dynamic green time based on vehicle count
-        const currentLight = this.trafficLights[this.currentGreenIndex];
-        let greenDuration = this.minGreenTime + (currentLight.carCount * 1000);
-        greenDuration = Math.min(greenDuration, this.maxGreenTime);
+        // Calculate dynamic green time based on traffic and phase
+        let greenDuration = this.calculatePhaseDuration();
 
+        // Get current active lights based on phase
+        const activeLight = this.getActiveLightForPhase();
+        
         // Check if we should switch to yellow
-        if (currentLight.state === 'green' && this.lightChangeTime >= greenDuration) {
-            currentLight.state = 'yellow';
-            currentLight.timer = 0;
-            this.addLog(`💛 ${currentLight.direction} switching to yellow`);
+        if (activeLight && activeLight.state === 'green' && this.lightChangeTime >= greenDuration) {
+            this.setPhaseYellow();
+            this.addLog(`💛 ${this.currentPhase} switching to yellow`);
         }
 
-        // Check if we should switch to next direction
-        if (currentLight.state === 'yellow') {
-            currentLight.timer += deltaTime;
-            if (currentLight.timer >= this.yellowTime) {
-                this.switchToNextDirection();
+        // Check if we should switch to next phase
+        if (activeLight && activeLight.state === 'yellow') {
+            activeLight.timer = (activeLight.timer || 0) + deltaTime;
+            if (activeLight.timer >= this.yellowTime) {
+                this.switchToNextPhase();
             }
         }
+    }
+
+    calculatePhaseDuration() {
+        let vehicleCount = 0;
+        
+        // Count vehicles that can use current phase
+        if (this.currentPhase.includes('NS')) {
+            vehicleCount += this.trafficLights[0].carCount + this.trafficLights[2].carCount;
+        } else if (this.currentPhase.includes('EW')) {
+            vehicleCount += this.trafficLights[1].carCount + this.trafficLights[3].carCount;
+        }
+
+        // Left turn phases get shorter duration
+        const isLeftPhase = this.currentPhase.includes('left');
+        const baseTime = isLeftPhase ? this.minGreenTime * 0.6 : this.minGreenTime;
+        
+        return Math.min(this.maxGreenTime, baseTime + (vehicleCount * 800));
+    }
+
+    getActiveLightForPhase() {
+        if (this.currentPhase.includes('NS')) {
+            return this.trafficLights[0]; // Use North as representative
+        } else if (this.currentPhase.includes('EW')) {
+            return this.trafficLights[1]; // Use East as representative
+        }
+        return null;
+    }
+
+    setPhaseYellow() {
+        this.trafficLights.forEach((light, index) => {
+            if (this.currentPhase.includes('NS') && (index === 0 || index === 2)) {
+                light.state = 'yellow';
+                light.timer = 0;
+            } else if (this.currentPhase.includes('EW') && (index === 1 || index === 3)) {
+                light.state = 'yellow';
+                light.timer = 0;
+            }
+        });
     }
 
     countVehiclesWaiting(direction) {
@@ -301,27 +413,69 @@ class TrafficSimulation {
         this.addLog(`💚 ${this.trafficLights[newDirection].direction} light is now GREEN`);
     }
 
-    switchToNextDirection() {
-        this.trafficLights[this.currentGreenIndex].state = 'red';
+    switchToNextPhase() {
+        // Set all lights to red
+        this.trafficLights.forEach(light => {
+            light.state = 'red';
+            light.leftArrow = 'red';
+            light.rightArrow = 'red';
+        });
 
-        // Find next direction with most vehicles or cycle through
-        let nextDirection = (this.currentGreenIndex + 1) % 4;
-        let maxCars = 0;
-        let bestDirection = nextDirection;
+        // Find current phase index and move to next
+        const currentPhaseIndex = this.phaseSequence.indexOf(this.currentPhase);
+        const nextPhaseIndex = (currentPhaseIndex + 1) % this.phaseSequence.length;
+        this.currentPhase = this.phaseSequence[nextPhaseIndex];
 
-        for (let i = 0; i < 4; i++) {
-            if (this.trafficLights[i].carCount > maxCars) {
-                maxCars = this.trafficLights[i].carCount;
-                bestDirection = i;
-            }
-        }
-
-        // Use best direction if it has waiting vehicles, otherwise cycle
-        this.currentGreenIndex = maxCars > 0 ? bestDirection : nextDirection;
-        this.trafficLights[this.currentGreenIndex].state = 'green';
+        // Set appropriate lights for new phase
+        this.activatePhase(this.currentPhase);
         this.lightChangeTime = 0;
 
-        this.addLog(`💚 Switched to ${this.trafficLights[this.currentGreenIndex].direction} (${maxCars} vehicles waiting)`);
+        this.addLog(`💚 Switched to phase: ${this.currentPhase}`);
+    }
+
+    activatePhase(phase) {
+        switch (phase) {
+            case 'NS_straight':
+                this.trafficLights[0].state = 'green'; // North
+                this.trafficLights[2].state = 'green'; // South
+                this.trafficLights[0].rightArrow = 'green'; // Allow right turns
+                this.trafficLights[2].rightArrow = 'green';
+                this.currentGreenIndex = 0;
+                break;
+            case 'NS_left':
+                this.trafficLights[0].leftArrow = 'green'; // Protected left for North
+                this.trafficLights[2].leftArrow = 'green'; // Protected left for South
+                // Keep main lights red for protected left phase
+                break;
+            case 'EW_straight':
+                this.trafficLights[1].state = 'green'; // East
+                this.trafficLights[3].state = 'green'; // West
+                this.trafficLights[1].rightArrow = 'green'; // Allow right turns
+                this.trafficLights[3].rightArrow = 'green';
+                this.currentGreenIndex = 1;
+                break;
+            case 'EW_left':
+                this.trafficLights[1].leftArrow = 'green'; // Protected left for East
+                this.trafficLights[3].leftArrow = 'green'; // Protected left for West
+                // Keep main lights red for protected left phase
+                break;
+        }
+    }
+
+    switchToEmergencyPhase(emergencyDirection) {
+        // Set all lights to red
+        this.trafficLights.forEach(light => {
+            light.state = 'red';
+            light.leftArrow = 'red';
+            light.rightArrow = 'red';
+        });
+
+        // Give full green to emergency direction
+        this.trafficLights[emergencyDirection].state = 'green';
+        this.trafficLights[emergencyDirection].leftArrow = 'green';
+        this.trafficLights[emergencyDirection].rightArrow = 'green';
+        this.currentGreenIndex = emergencyDirection;
+        this.lightChangeTime = 0;
     }
 
     updateVehicles(deltaTime) {
@@ -336,16 +490,39 @@ class TrafficSimulation {
             vehicle.stopped = shouldStop;
 
             if (!shouldStop) {
-                // Move vehicle
-                const dx = vehicle.targetX - vehicle.x;
-                const dy = vehicle.targetY - vehicle.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                // Check if vehicle is in intersection
+                const distToCenter = Math.sqrt(
+                    Math.pow(vehicle.x - this.centerX, 2) + 
+                    Math.pow(vehicle.y - this.centerY, 2)
+                );
+                vehicle.inIntersection = distToCenter < 70;
 
-                if (distance > 5) {
-                    vehicle.x += (dx / distance) * vehicle.speed;
-                    vehicle.y += (dy / distance) * vehicle.speed;
+                // Navigate through waypoints
+                if (vehicle.currentWaypoint < vehicle.waypoints.length) {
+                    const currentTarget = vehicle.waypoints[vehicle.currentWaypoint];
+                    const dx = currentTarget.x - vehicle.x;
+                    const dy = currentTarget.y - vehicle.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance > 5) {
+                        // Move towards current waypoint
+                        const moveX = (dx / distance) * vehicle.speed;
+                        const moveY = (dy / distance) * vehicle.speed;
+                        vehicle.x += moveX;
+                        vehicle.y += moveY;
+
+                        // Update angle for smooth turning
+                        if (vehicle.turnType > 0 && vehicle.inIntersection) {
+                            vehicle.angle = Math.atan2(dy, dx);
+                            if (vehicle.direction === 0) vehicle.angle += Math.PI / 2; // North adjustment
+                            else if (vehicle.direction === 2) vehicle.angle -= Math.PI / 2; // South adjustment
+                        }
+                    } else {
+                        // Reached current waypoint, move to next
+                        vehicle.currentWaypoint++;
+                    }
                 } else {
-                    // Vehicle has reached destination - safe to remove
+                    // All waypoints completed - vehicle has exited
                     this.vehicles.splice(i, 1);
                     this.stats.vehiclesPassed++;
                 }
@@ -358,24 +535,62 @@ class TrafficSimulation {
     }
 
     shouldVehicleStop(vehicle, light) {
-        if (light.state === 'green') return false;
         if (vehicle.isEmergency) return false; // Emergency vehicles don't stop
+        if (vehicle.inIntersection) return false; // Don't stop if already in intersection
+
+        // Check turning permissions
+        const canProceed = this.canVehicleProceed(vehicle, light);
+        if (canProceed) return false;
 
         // Check if vehicle is approaching intersection
         let stopLine;
         switch (vehicle.direction) {
             case 0: // North
-                stopLine = this.centerY + 40;
+                stopLine = this.centerY + 45;
                 return vehicle.y > stopLine && vehicle.y < stopLine + 80;
             case 1: // East
-                stopLine = this.centerX - 40;
+                stopLine = this.centerX - 45;
                 return vehicle.x < stopLine && vehicle.x > stopLine - 80;
             case 2: // South
-                stopLine = this.centerY - 40;
+                stopLine = this.centerY - 45;
                 return vehicle.y < stopLine && vehicle.y > stopLine - 80;
             case 3: // West
-                stopLine = this.centerX + 40;
+                stopLine = this.centerX + 45;
                 return vehicle.x > stopLine && vehicle.x < stopLine + 80;
+        }
+        return false;
+    }
+
+    canVehicleProceed(vehicle, light) {
+        // Straight through traffic
+        if (vehicle.turnType === 0) {
+            return light.state === 'green';
+        }
+
+        // Left turns - need both main green and left arrow, or protected left phase
+        if (vehicle.turnType === 1) {
+            return (light.state === 'green' && light.leftArrow === 'green') || 
+                   this.isProtectedLeftPhase(vehicle.direction);
+        }
+
+        // Right turns - generally allowed on green, some restrictions apply
+        if (vehicle.turnType === 2) {
+            return light.state === 'green' || light.rightArrow === 'green';
+        }
+
+        return false;
+    }
+
+    isProtectedLeftPhase(direction) {
+        // Check if current phase allows protected left turns for this direction
+        const directionNames = ['North', 'East', 'South', 'West'];
+        const currentDir = directionNames[direction];
+        
+        if (this.currentPhase === 'NS_left' && (currentDir === 'North' || currentDir === 'South')) {
+            return true;
+        }
+        if (this.currentPhase === 'EW_left' && (currentDir === 'East' || currentDir === 'West')) {
+            return true;
         }
         return false;
     }
@@ -471,6 +686,14 @@ class TrafficSimulation {
             this.ctx.arc(light.x, light.y + 10, 6, 0, Math.PI * 2);
             this.ctx.fill();
 
+            // Left turn arrow
+            this.ctx.fillStyle = light.leftArrow === 'green' ? lightColors.green : '#7f8c8d';
+            this.drawArrow(light.x - 15, light.y, 'left', index);
+
+            // Right turn arrow
+            this.ctx.fillStyle = light.rightArrow === 'green' ? lightColors.green : '#7f8c8d';
+            this.drawArrow(light.x + 15, light.y, 'right', index);
+
             // Highlight current green light with glow effect
             if (light.state === 'green') {
                 this.ctx.shadowColor = '#2ecc71';
@@ -502,13 +725,51 @@ class TrafficSimulation {
         });
     }
 
+    drawArrow(x, y, direction, lightIndex) {
+        this.ctx.save();
+        this.ctx.translate(x, y);
+        
+        // Rotate arrow based on traffic light orientation
+        let rotation = 0;
+        if (direction === 'left') {
+            switch(lightIndex) {
+                case 0: rotation = Math.PI; break; // North - left is west
+                case 1: rotation = -Math.PI/2; break; // East - left is north
+                case 2: rotation = 0; break; // South - left is east
+                case 3: rotation = Math.PI/2; break; // West - left is south
+            }
+        } else { // right
+            switch(lightIndex) {
+                case 0: rotation = 0; break; // North - right is east
+                case 1: rotation = Math.PI/2; break; // East - right is south
+                case 2: rotation = Math.PI; break; // South - right is west
+                case 3: rotation = -Math.PI/2; break; // West - right is north
+            }
+        }
+        
+        this.ctx.rotate(rotation);
+        
+        // Draw arrow shape
+        this.ctx.beginPath();
+        this.ctx.moveTo(-3, 0);
+        this.ctx.lineTo(3, -3);
+        this.ctx.lineTo(1, -1);
+        this.ctx.lineTo(1, 3);
+        this.ctx.lineTo(-1, 3);
+        this.ctx.lineTo(-1, -1);
+        this.ctx.closePath();
+        this.ctx.fill();
+        
+        this.ctx.restore();
+    }
+
     drawTimer(light, index) {
         let timeRemaining;
         if (light.state === 'green') {
-            const greenDuration = this.minGreenTime + (light.carCount * 1000);
+            const greenDuration = this.calculatePhaseDuration();
             timeRemaining = Math.max(0, greenDuration - this.lightChangeTime);
         } else if (light.state === 'yellow') {
-            timeRemaining = Math.max(0, this.yellowTime - light.timer);
+            timeRemaining = Math.max(0, this.yellowTime - (light.timer || 0));
         } else {
             timeRemaining = 0;
         }
@@ -540,6 +801,19 @@ class TrafficSimulation {
             this.ctx.strokeStyle = '#2c3e50';
             this.ctx.lineWidth = 1;
             this.ctx.strokeRect(-vehicle.width/2, -vehicle.height/2, vehicle.width, vehicle.height);
+
+            // Turn signal indicators
+            if (vehicle.turnSignal && !vehicle.inIntersection) {
+                const flash = Math.floor(Date.now() / 500) % 2;
+                if (flash) {
+                    this.ctx.fillStyle = '#FFA500'; // Orange for turn signals
+                    if (vehicle.turnSignal === 'left') {
+                        this.ctx.fillRect(-vehicle.width/2 - 3, -2, 3, 4);
+                    } else if (vehicle.turnSignal === 'right') {
+                        this.ctx.fillRect(vehicle.width/2, -2, 3, 4);
+                    }
+                }
+            }
 
             // Emergency vehicle effects
             if (vehicle.isEmergency) {
