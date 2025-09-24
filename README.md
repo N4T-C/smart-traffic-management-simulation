@@ -1,3 +1,4 @@
+
 # Smart Traffic Management Simulation
 
 A comprehensive AI-powered traffic control system developed for the Smart India Hackathon. This project demonstrates intelligent traffic management through real-time vehicle detection, machine learning-based optimization, and dynamic traffic light control using computer vision, reinforcement learning, and web-based visualization.
@@ -6,7 +7,7 @@ A comprehensive AI-powered traffic control system developed for the Smart India 
 
 - **Frontend**: Canvas-based web simulation with HTML5, CSS3, and JavaScript
 - **Backend**: Dual approach with Express.js server and Python Flask application
-- **AI Components**: Pygame-based traffic simulation with reinforcement learning
+- **AI Components**: Machine Learning-based traffic prediction with real-time training
 - **Hardware Integration**: Arduino and Raspberry Pi support for IoT prototyping
 
 ## 📋 Requirements
@@ -73,6 +74,7 @@ npm install
 ```
 smart-traffic-sim/
 ├── README.md
+├── ABOUT.md
 ├── LICENSE
 ├── requirements.txt
 ├── package.json
@@ -89,7 +91,12 @@ smart-traffic-sim/
 ├── backend/
 │   ├── flask_app/
 │   │   ├── app.py
-│   │   └── rl_agent.py
+│   │   ├── rl_agent.py
+│   │   └── schedulers.py
+├── model_training/
+│   ├── data.csv
+│   ├── train_model.py
+│   └── predict_scheduling.py
 ├── models/
 │   ├── yolov8/
 │   └── checkpoints/
@@ -168,9 +175,10 @@ print('Generated schedule:', [f'{p.phase}: {p.duration}s' for p in plan])
    - Monitor real-time traffic data
    - View intersection statistics
    - Control simulation parameters
+   - Select time periods for Indian traffic patterns
 
 ### Pygame Simulation Controls
-- **SPACE**: Spawn emergency vehicle
+- **5-8**: Spawn emergency vehicle from specific direction (N/E/S/W)
 - **1-4**: Spawn vehicle in specific lane (North, East, South, West)
 - **ESC**: Exit simulation
 
@@ -179,6 +187,10 @@ print('Generated schedule:', [f'{p.phase}: {p.duration}s' for p in plan])
 - **Emergency Vehicle Priority**: Automatic green light for emergency vehicles
 - **Real-time Statistics**: Vehicle count, wait times, and flow metrics
 - **Multi-lane Intersection**: 4-way crossroad simulation
+- **Machine Learning Integration**: Predictive traffic optimization
+- **Time-based Traffic Patterns**: Indian traffic condition simulation
+- **Accident Detection & Prevention**: Real collision handling
+- **Rule Violation Monitoring**: Safety compliance tracking
 
 ## 🔧 Development
 
@@ -197,61 +209,78 @@ print('Generated schedule:', [f'{p.phase}: {p.duration}s' for p in plan])
 ## 🏆 Smart India Hackathon Features
 
 ### AI/ML Components
+- **Machine Learning**: Real-time traffic prediction and optimization
+- **Computer Vision**: Vehicle detection (YOLOv8 integration)
+- **Predictive Analytics**: Traffic flow optimization with auto-retraining
 - **Reinforcement Learning**: Q-learning for traffic optimization
-- **Computer Vision**: Vehicle detection (YOLOv8 integration planned)
-- **Predictive Analytics**: Traffic flow optimization
 
 ### Hardware Integration
 - **Arduino**: Traffic light controller prototype
 - **Raspberry Pi**: Camera-based vehicle detection
 - **IoT Integration**: Real-time sensor data processing
 
-## 📊 Project Components
+## 📊 Programming Languages & Technologies Used
 
-### Frontend (`frontend/web_sim/`)
-- Interactive traffic visualization
-- Real-time dashboard
-- Canvas-based animation
+### **Core Languages**
+- **Python** (v3.11+) - Backend simulation, ML models, data processing
+- **JavaScript** (ES6+) - Frontend simulation, real-time interactions
+- **HTML5** - Web interface structure and Canvas API
+- **CSS3** - Responsive design and animations
+- **C++** (Arduino) - Hardware controller programming
 
-### Backend (`backend/flask_app/`)
-- Pygame traffic simulation
-- AI traffic light controller
-- Vehicle physics engine
+### **Frontend Technologies**
+- **HTML5 Canvas API** - Real-time traffic visualization
+- **CSS Grid & Flexbox** - Responsive layout design
+- **JavaScript ES6 Modules** - Modular code organization
+- **Web APIs** - Local storage, keyboard events, animation frames
 
-### Models (`models/`)
-- YOLOv8 vehicle detection
-- Trained model checkpoints
-- ML model artifacts
+### **Backend Technologies**
+- **Node.js & Express.js** - Web server and API endpoints
+- **Python Flask** - Alternative backend server
+- **Socket.IO** - Real-time bidirectional communication
+- **RESTful APIs** - Data exchange between components
 
-### Prototype (`prototype/`)
-- Arduino traffic controller
-- Raspberry Pi integration
-- Hardware interface code
+### **Python Libraries & Frameworks**
+- **pygame** (v2.6.1) - Traffic simulation engine
+- **flask** (v3.0.0) - Web framework
+- **numpy** (v1.24.3) - Numerical computations
+- **pandas** (v2.0.3) - Data manipulation and analysis
+- **scikit-learn** (v1.3.0) - Machine learning algorithms
+- **opencv-python** (v4.8.0) - Computer vision processing
+- **matplotlib** (v3.7.2) - Data visualization
+- **pytest** (v7.4.0) - Testing framework
 
-## 🐛 Troubleshooting
+### **JavaScript Libraries & Packages**
+- **express** (v4.18.2) - Web application framework
+- **socket.io** (v4.7.2) - Real-time communication
+- **nodemon** (v3.0.1) - Development server auto-restart
+- **cors** (v2.8.5) - Cross-origin resource sharing
 
-### Common Issues
+### **Machine Learning & AI**
+- **Supervised Learning** - Traffic pattern prediction
+- **Time Series Analysis** - Traffic flow forecasting
+- **Decision Trees & Random Forest** - Scheduling optimization
+- **Linear Regression** - Vehicle count prediction
+- **Feature Engineering** - Traffic data preprocessing
 
-#### Pygame Installation Issues:
-```bash
-# If pygame fails to install, try:
-pip install pygame --upgrade
-# Or on Linux:
-sudo apt install python3-pygame
-```
+### **Hardware & IoT**
+- **Arduino IDE & C++** - Microcontroller programming
+- **Raspberry Pi OS** - Edge computing platform
+- **OpenCV** - Real-time image processing
+- **GPIO Programming** - Hardware interface control
 
-#### Port Already in Use:
-```bash
-# Kill process using port 5000
-sudo lsof -t -i tcp:5000 | xargs kill -9
-# Or change port in server.js
-```
+### **Development Tools**
+- **Git** - Version control system
+- **VS Code** - Integrated development environment
+- **npm** - Package management
+- **pip** - Python package installer
+- **pytest** - Automated testing
 
-#### SDL2 Errors on Linux:
-```bash
-# Install additional SDL2 packages
-sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0
-```
+### **Data Storage & Processing**
+- **CSV Files** - Training data storage
+- **JSON** - Configuration and API data
+- **Real-time Streaming** - Live data processing
+- **File I/O Operations** - Data persistence
 
 ## 📝 License
 
@@ -270,14 +299,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For questions and support, please refer to the documentation in the `docs/` directory or create an issue on the repository.
 
 ---
-**Smart India Hackathon 2024** | AI-Powered Traffic Management Solution
-
-**Languages Used**:
-- Python
-- JavaScript
-- HTML
-- CSS
-
-**Packages Used**:
-- **Python**: pygame, flask, numpy, opencv-python, tensorflow (for potential future ML integration), pytest
-- **JavaScript**: express, socket.io, react (for frontend framework, if applicable)
+**Smart India Hackathon 2025** | AI-Powered Traffic Management Solution with Machine Learning Integration

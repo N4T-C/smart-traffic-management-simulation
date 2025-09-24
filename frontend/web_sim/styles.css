@@ -170,37 +170,58 @@ body {
     transform: none !important;
 }
 
+.manual-controls {
+    margin-top: 20px;
+}
+
 .manual-controls h3 {
     color: #2c3e50;
     margin-bottom: 15px;
     font-size: 1.1rem;
 }
 
-.control-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.control-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px;
-    background: rgba(52, 152, 219, 0.1);
+.time-controls {
+    margin-top: 20px;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
     border-radius: 8px;
+    border: 1px solid #dee2e6;
 }
 
-kbd {
-    background: #34495e;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 0.9rem;
-    font-weight: bold;
-    min-width: 50px;
-    text-align: center;
+.time-controls h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+}
+
+.time-selector {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #3498db;
+    border-radius: 6px;
+    background: white;
+    font-size: 14px;
+    color: #2c3e50;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.time-selector:hover {
+    border-color: #2980b9;
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.time-selector:focus {
+    outline: none;
+    border-color: #2980b9;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.time-description {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #6c757d;
+    font-style: italic;
 }
 
 /* Stats Section */
@@ -515,21 +536,21 @@ kbd {
             "data"
             "logs";
     }
-    
+
     .header-content h1 {
         font-size: 2.2rem;
     }
-    
+
     .controls {
         flex-direction: row;
         justify-content: center;
     }
-    
+
     .stats-grid {
         flex-direction: row;
         justify-content: space-around;
     }
-    
+
     .simulation-header {
         flex-direction: column;
         text-align: center;
@@ -540,19 +561,19 @@ kbd {
     .container {
         padding: 10px;
     }
-    
+
     .header-content h1 {
         font-size: 1.8rem;
     }
-    
+
     .controls {
         flex-direction: column;
     }
-    
+
     .stats-grid {
         flex-direction: column;
     }
-    
+
     .header-badges {
         flex-direction: column;
         align-items: center;

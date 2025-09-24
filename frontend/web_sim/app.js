@@ -22,8 +22,38 @@ class TrafficSimulation {
         this.emergencyVehicles = [];
         this.lastSpawnTime = 0;
         this.lastEmergencySpawn = 0;
-        this.spawnRate = 2000; // milliseconds between spawns
+        this.baseSpawnRate = 2000; // base milliseconds between spawns
         this.emergencyRate = 15000; // emergency vehicle every 15 seconds
+
+        // Time-based traffic patterns (Indian traffic conditions)
+        this.timeOfDay = 'AFTERNOON'; // Default
+        this.trafficPatterns = {
+            'EARLY_MORNING': {
+                name: 'Early Morning (5:00-7:00 AM)',
+                globalMultiplier: 0.3, // Low traffic
+                directionMultipliers: { north: 1.0, east: 1.0, south: 1.0, west: 1.0 }
+            },
+            'MORNING': {
+                name: 'Morning Rush (7:00-11:00 AM)',
+                globalMultiplier: 1.8, // High traffic
+                directionMultipliers: { north: 1.0, east: 2.0, south: 2.2, west: 1.0 } // High from South & East
+            },
+            'AFTERNOON': {
+                name: 'Afternoon (11:00-4:00 PM)',
+                globalMultiplier: 1.0, // Moderate traffic
+                directionMultipliers: { north: 1.0, east: 1.0, south: 1.0, west: 1.0 }
+            },
+            'EVENING': {
+                name: 'Evening Rush (4:00-8:00 PM)',
+                globalMultiplier: 1.8, // High traffic
+                directionMultipliers: { north: 2.2, east: 1.0, south: 1.0, west: 2.0 } // High from North & West
+            },
+            'NIGHT': {
+                name: 'Night (8:00 PM-5:00 AM)',
+                globalMultiplier: 0.6, // Moderate-low traffic
+                directionMultipliers: { north: 1.0, east: 1.0, south: 1.0, west: 1.0 }
+            }
+        };
 
         // Traffic light system
         this.trafficLights = [
@@ -56,6 +86,12 @@ class TrafficSimulation {
         document.getElementById('startBtn').addEventListener('click', () => this.startSimulation());
         document.getElementById('stopBtn').addEventListener('click', () => this.stopSimulation());
         document.getElementById('resetBtn').addEventListener('click', () => this.resetSimulation());
+
+        // Time of day selector
+        document.getElementById('timeSelector').addEventListener('change', (e) => {
+            this.timeOfDay = e.target.value;
+            this.addLog(`🕐 Time period changed to: ${this.trafficPatterns[this.timeOfDay].name}`, 'info');
+        });
 
         // Manual controls
         document.addEventListener('keydown', (e) => {
@@ -165,6 +201,27 @@ class TrafficSimulation {
         this.stats.emergencyVehicles++;
         this.addLog(`🚨 Emergency vehicle approaching from ${lastVehicle.directionName}!`, 'warning');
         this.updateStats();
+    }
+
+    getSpawnRateForDirection(direction) {
+        const pattern = this.trafficPatterns[this.timeOfDay];
+        const directions = ['north', 'east', 'south', 'west'];
+        const directionName = directions[direction];
+        
+        const globalRate = this.baseSpawnRate / pattern.globalMultiplier;
+        const directionRate = globalRate / pattern.directionMultipliers[directionName];
+        
+        return Math.max(500, directionRate); // Minimum 500ms between spawns
+    }
+
+    shouldSpawnInDirection(direction, currentTime) {
+        const spawnRate = this.getSpawnRateForDirection(direction);
+        const lastSpawn = this.lastSpawnTime || 0;
+        
+        // Add some randomness to make it more realistic
+        const randomFactor = 0.7 + Math.random() * 0.6; // 0.7 to 1.3 multiplier
+        
+        return (currentTime - lastSpawn) > (spawnRate * randomFactor);
     }
 
     updateTrafficLights(deltaTime) {
@@ -507,11 +564,22 @@ class TrafficSimulation {
         // Current green indicator
         const currentLight = this.trafficLights[this.currentGreenIndex];
         this.ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
-        this.ctx.fillRect(10, 10, 200, 40);
+        this.ctx.fillRect(10, 10, 250, 60);
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'left';
-        this.ctx.fillText(`🟢 GREEN: ${currentLight.direction}`, 20, 35);
+        this.ctx.fillText(`🟢 GREEN: ${currentLight.direction}`, 20, 25);
+        
+        // Time period indicator
+        this.ctx.font = 'bold 12px Arial';
+        this.ctx.fillText(`🕐 ${this.trafficPatterns[this.timeOfDay].name}`, 20, 45);
+        
+        // Traffic intensity indicator
+        const intensity = this.trafficPatterns[this.timeOfDay].globalMultiplier;
+        let intensityText = '🔵 Low';
+        if (intensity > 1.5) intensityText = '🔴 High';
+        else if (intensity > 0.8) intensityText = '🟡 Medium';
+        this.ctx.fillText(`Traffic: ${intensityText}`, 20, 60);
 
         // Instructions
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -530,6 +598,7 @@ class TrafficSimulation {
         document.getElementById('congestedAreas').textContent = this.stats.emergencyVehicles;
 
         // Update additional stats in intersections area
+        const pattern = this.trafficPatterns[this.timeOfDay];
         const container = document.getElementById('intersections');
         container.innerHTML = `
             <div class="stat-summary">
@@ -551,6 +620,14 @@ class TrafficSimulation {
                         <span class="stat-label">Active Green:</span>
                         <span class="stat-value green-indicator">${this.trafficLights[this.currentGreenIndex].direction}</span>
                     </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Traffic Period:</span>
+                        <span class="stat-value">${pattern.name}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Traffic Intensity:</span>
+                        <span class="stat-value">${pattern.globalMultiplier > 1.5 ? '🔴 High' : pattern.globalMultiplier > 0.8 ? '🟡 Medium' : '🔵 Low'}</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -562,11 +639,15 @@ class TrafficSimulation {
         const deltaTime = currentTime - (this.lastTime || currentTime);
         this.lastTime = currentTime;
 
-        // Auto-spawn vehicles
-        if (currentTime - this.lastSpawnTime > this.spawnRate) {
-            const direction = Math.floor(Math.random() * 4);
-            this.spawnVehicle(direction);
-            this.lastSpawnTime = currentTime;
+        // Auto-spawn vehicles based on time of day patterns
+        for (let direction = 0; direction < 4; direction++) {
+            if (this.shouldSpawnInDirection(direction, currentTime)) {
+                // Add some randomness to avoid all directions spawning at once
+                if (Math.random() < 0.3) { // 30% chance when conditions are met
+                    this.spawnVehicle(direction);
+                    this.lastSpawnTime = currentTime;
+                }
+            }
         }
 
         // Auto-spawn emergency vehicles
