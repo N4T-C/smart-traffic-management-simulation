@@ -1,4 +1,3 @@
-
 class TrafficSimulation {
     constructor() {
         this.isRunning = false;
@@ -26,31 +25,12 @@ class TrafficSimulation {
         this.spawnRate = 2000; // milliseconds between spawns
         this.emergencyRate = 15000; // emergency vehicle every 15 seconds
 
-        // ML Integration
-        this.lastDataLogTime = 0;
-        this.dataLogInterval = 5000; // Log every 5 seconds
-        this.lastTrainingTime = 0;
-        this.trainingInterval = 5000; // Train every 5 seconds
-        this.lastPredictionTime = 0;
-        this.predictionInterval = 10000; // Predict every 10 seconds
-        this.currentPredictedScheduling = 'Round Robin';
-        this.availableSchedulingMethods = ['Round Robin', 'Priority Scheduling', 'Shortest Job First'];
-
-        // Rule violations and accident handling
-        this.ruleViolations = [];
-        this.accidents = [];
-        this.safetyDistanceThreshold = 25;
-        this.speedLimit = 3.0;
-        this.redLightViolations = 0;
-        this.speedingViolations = 0;
-        this.accidentCount = 0;
-
-        // Traffic light system with ML enhancement
+        // Traffic light system
         this.trafficLights = [
-            { direction: 'North', x: this.centerX - 15, y: this.centerY - 80, state: 'red', timer: 0, carCount: 0, mlWeight: 1.0 },
-            { direction: 'East', x: this.centerX + 80, y: this.centerY - 15, state: 'red', timer: 0, carCount: 0, mlWeight: 1.0 },
-            { direction: 'South', x: this.centerX + 15, y: this.centerY + 80, state: 'red', timer: 0, carCount: 0, mlWeight: 1.0 },
-            { direction: 'West', x: this.centerX - 80, y: this.centerY + 15, state: 'red', timer: 0, carCount: 0, mlWeight: 1.0 }
+            { direction: 'North', x: this.centerX - 15, y: this.centerY - 80, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'East', x: this.centerX + 80, y: this.centerY - 15, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'South', x: this.centerX + 15, y: this.centerY + 80, state: 'red', timer: 0, carCount: 0 },
+            { direction: 'West', x: this.centerX - 80, y: this.centerY + 15, state: 'red', timer: 0, carCount: 0 }
         ];
 
         this.currentGreenIndex = 0;
@@ -60,22 +40,16 @@ class TrafficSimulation {
         this.minGreenTime = 4000;
         this.maxGreenTime = 10000;
 
-        // Enhanced stats with ML metrics
+        // Stats
         this.stats = {
             totalVehicles: 0,
             vehiclesPassed: 0,
             emergencyVehicles: 0,
-            currentWaiting: 0,
-            ruleViolations: 0,
-            accidents: 0,
-            mlPredictions: 0,
-            averageWaitTime: 0,
-            trafficEfficiency: 100
+            currentWaiting: 0
         };
 
         this.initializeEventListeners();
-        this.addLog('🚦 Smart Traffic Management System with AI Ready!');
-        this.addLog('🤖 ML Model integration active - training every 5 seconds');
+        this.addLog('🚦 Smart Traffic Management System Ready!');
     }
 
     initializeEventListeners() {
@@ -119,25 +93,18 @@ class TrafficSimulation {
         const directions = ['North', 'East', 'South', 'West'];
         const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
 
-        // Check for safe spawning position to prevent immediate collisions
-        const safePosition = this.findSafeSpawnPosition(direction);
-        if (!safePosition.safe) {
-            this.addLog(`⚠️ Cannot spawn vehicle - unsafe conditions in ${directions[direction]}`, 'warning');
-            return;
-        }
-
         let startX, startY, targetX, targetY, angle;
 
         switch(direction) {
             case 0: // North (coming from south)
                 startX = this.centerX - 15;
-                startY = this.canvasHeight + safePosition.offset;
+                startY = this.canvasHeight + this.findSafeSpawnPosition(direction);
                 targetX = this.centerX - 15;
                 targetY = -30;
                 angle = -Math.PI / 2;
                 break;
             case 1: // East (coming from west)
-                startX = -30 - safePosition.offset;
+                startX = -30 - this.findSafeSpawnPosition(direction);
                 startY = this.centerY - 15;
                 targetX = this.canvasWidth + 30;
                 targetY = this.centerY - 15;
@@ -145,13 +112,13 @@ class TrafficSimulation {
                 break;
             case 2: // South (coming from north)
                 startX = this.centerX + 15;
-                startY = -30 - safePosition.offset;
+                startY = -30 - this.findSafeSpawnPosition(direction);
                 targetX = this.centerX + 15;
                 targetY = this.canvasHeight + 30;
                 angle = Math.PI / 2;
                 break;
             case 3: // West (coming from east)
-                startX = this.canvasWidth + 30 + safePosition.offset;
+                startX = this.canvasWidth + 30 + this.findSafeSpawnPosition(direction);
                 startY = this.centerY + 15;
                 targetX = -30;
                 targetY = this.centerY + 15;
@@ -166,17 +133,14 @@ class TrafficSimulation {
             targetY: targetY,
             direction: direction,
             directionName: directions[direction],
-            speed: Math.max(0.5, Math.min(this.speedLimit, 1.5 + Math.random() * 0.5)),
-            originalSpeed: 1.5 + Math.random() * 0.5,
+            speed: 1.5 + Math.random() * 0.5,
             color: colors[Math.floor(Math.random() * colors.length)],
             width: 20,
             height: 12,
             angle: angle,
             stopped: false,
             isEmergency: false,
-            id: Math.random().toString(36).substr(2, 9),
-            waitTime: 0,
-            hasViolatedRules: false
+            id: Math.random().toString(36).substr(2, 9)
         };
 
         this.vehicles.push(vehicle);
@@ -194,281 +158,13 @@ class TrafficSimulation {
 
         // Convert last spawned vehicle to emergency
         const lastVehicle = this.vehicles[this.vehicles.length - 1];
-        if (lastVehicle) {
-            lastVehicle.isEmergency = true;
-            lastVehicle.color = '#ff0000';
-            lastVehicle.speed = Math.min(this.speedLimit * 1.3, lastVehicle.speed * 1.3);
+        lastVehicle.isEmergency = true;
+        lastVehicle.color = '#ff0000';
+        lastVehicle.speed *= 1.3;
 
-            this.stats.emergencyVehicles++;
-            this.addLog(`🚨 Emergency vehicle approaching from ${lastVehicle.directionName}!`, 'warning');
-        }
+        this.stats.emergencyVehicles++;
+        this.addLog(`🚨 Emergency vehicle approaching from ${lastVehicle.directionName}!`, 'warning');
         this.updateStats();
-    }
-
-    // ML Integration Functions
-    async logDataToCSV(currentTime) {
-        if (currentTime - this.lastDataLogTime >= this.dataLogInterval) {
-            const timestamp = new Date().toISOString();
-            const carsPresent = this.vehicles.length;
-            const emergencyVehicle = this.vehicles.some(v => v.isEmergency) ? 1 : 0;
-            
-            // Determine current scheduling model based on traffic conditions
-            let schedulingModel = this.determineCurrentSchedulingModel();
-            
-            // Log data
-            try {
-                const response = await fetch('/api/log-data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        timestamp: timestamp,
-                        cars_present: carsPresent,
-                        emergency_vehicle: emergencyVehicle,
-                        scheduling_model: schedulingModel
-                    })
-                });
-
-                if (response.ok) {
-                    this.addLog(`📊 Data logged: ${carsPresent} cars, Emergency: ${emergencyVehicle ? 'Yes' : 'No'}, Model: ${schedulingModel}`);
-                } else {
-                    this.addLog('⚠️ Failed to log data to CSV', 'warning');
-                }
-            } catch (error) {
-                this.addLog(`❌ Error logging data: ${error.message}`, 'error');
-            }
-
-            this.lastDataLogTime = currentTime;
-        }
-    }
-
-    async trainMLModel(currentTime) {
-        if (currentTime - this.lastTrainingTime >= this.trainingInterval) {
-            try {
-                this.addLog('🔄 Training ML model with latest data...');
-                const response = await fetch('/api/train-model', {
-                    method: 'POST'
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    this.addLog(`✅ Model training completed: ${result.message}`);
-                } else {
-                    this.addLog('⚠️ Model training failed', 'warning');
-                }
-            } catch (error) {
-                this.addLog(`❌ Error training model: ${error.message}`, 'error');
-            }
-
-            this.lastTrainingTime = currentTime;
-        }
-    }
-
-    async getPrediction(currentTime) {
-        if (currentTime - this.lastPredictionTime >= this.predictionInterval) {
-            try {
-                const timestamp = new Date(Date.now() + 10000).toISOString(); // 10 seconds ahead
-                const carsPresent = this.vehicles.length + Math.floor(Math.random() * 5); // Predict future traffic
-                const emergencyVehicle = Math.random() < 0.1 ? 1 : 0; // 10% chance of emergency
-
-                const response = await fetch('/api/predict', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        timestamp: timestamp,
-                        cars_present: carsPresent,
-                        emergency_vehicle: emergencyVehicle
-                    })
-                });
-
-                if (response.ok) {
-                    const result = await response.json();
-                    this.currentPredictedScheduling = result.scheduling_model;
-                    this.stats.mlPredictions++;
-                    this.addLog(`🔮 ML Prediction: ${result.scheduling_model} (${carsPresent} cars predicted)`);
-                } else {
-                    this.addLog('⚠️ Prediction request failed', 'warning');
-                }
-            } catch (error) {
-                this.addLog(`❌ Error getting prediction: ${error.message}`, 'error');
-            }
-
-            this.lastPredictionTime = currentTime;
-        }
-    }
-
-    determineCurrentSchedulingModel() {
-        const totalVehicles = this.vehicles.length;
-        const emergencyPresent = this.vehicles.some(v => v.isEmergency);
-        const queueVariance = this.calculateQueueVariance();
-
-        if (emergencyPresent) {
-            return 'Priority Scheduling';
-        } else if (totalVehicles < 5) {
-            return 'Round Robin';
-        } else if (queueVariance > 3) {
-            return 'Shortest Job First';
-        } else {
-            return 'Priority Scheduling';
-        }
-    }
-
-    calculateQueueVariance() {
-        const queues = this.trafficLights.map(light => light.carCount);
-        const mean = queues.reduce((sum, q) => sum + q, 0) / queues.length;
-        const variance = queues.reduce((sum, q) => sum + Math.pow(q - mean, 2), 0) / queues.length;
-        return variance;
-    }
-
-    // Rule Violation Detection
-    detectRuleViolations() {
-        this.vehicles.forEach(vehicle => {
-            // Speed limit violations
-            if (vehicle.speed > this.speedLimit && !vehicle.hasViolatedRules) {
-                this.speedingViolations++;
-                this.stats.ruleViolations++;
-                vehicle.hasViolatedRules = true;
-                this.ruleViolations.push({
-                    type: 'SPEEDING',
-                    vehicleId: vehicle.id,
-                    speed: vehicle.speed,
-                    limit: this.speedLimit,
-                    timestamp: Date.now(),
-                    direction: vehicle.directionName
-                });
-                this.addLog(`🚔 VIOLATION: Vehicle ${vehicle.id.substring(0, 6)} speeding at ${vehicle.speed.toFixed(1)} in ${vehicle.directionName}`, 'warning');
-            }
-
-            // Red light violations
-            const light = this.trafficLights[vehicle.direction];
-            if (light.state === 'red' && this.isVehicleInIntersection(vehicle) && !vehicle.isEmergency && !vehicle.hasViolatedRules) {
-                this.redLightViolations++;
-                this.stats.ruleViolations++;
-                vehicle.hasViolatedRules = true;
-                this.ruleViolations.push({
-                    type: 'RED_LIGHT_VIOLATION',
-                    vehicleId: vehicle.id,
-                    timestamp: Date.now(),
-                    direction: vehicle.directionName
-                });
-                this.addLog(`🚨 VIOLATION: Vehicle ${vehicle.id.substring(0, 6)} ran red light from ${vehicle.directionName}`, 'error');
-            }
-        });
-    }
-
-    // Accident Detection and Prevention
-    detectAndPreventAccidents() {
-        for (let i = 0; i < this.vehicles.length; i++) {
-            for (let j = i + 1; j < this.vehicles.length; j++) {
-                const vehicle1 = this.vehicles[i];
-                const vehicle2 = this.vehicles[j];
-
-                const distance = Math.sqrt(
-                    Math.pow(vehicle1.x - vehicle2.x, 2) + 
-                    Math.pow(vehicle1.y - vehicle2.y, 2)
-                );
-
-                // Collision detection
-                if (distance < this.safetyDistanceThreshold) {
-                    // Emergency braking
-                    vehicle1.speed = Math.max(0.1, vehicle1.speed * 0.3);
-                    vehicle2.speed = Math.max(0.1, vehicle2.speed * 0.3);
-
-                    // Check for actual collision
-                    if (distance < 15) {
-                        this.handleAccident(vehicle1, vehicle2);
-                    }
-                }
-
-                // Prevent rear-end collisions in same direction
-                if (this.isSameDirection(vehicle1, vehicle2) && this.isVehicleAhead(vehicle1, vehicle2)) {
-                    if (distance < this.safetyDistanceThreshold + 10) {
-                        vehicle2.speed = Math.max(0.1, vehicle1.speed * 0.8); // Following vehicle slows down
-                    }
-                }
-            }
-        }
-    }
-
-    handleAccident(vehicle1, vehicle2) {
-        this.accidentCount++;
-        this.stats.accidents++;
-        
-        const accident = {
-            id: Math.random().toString(36).substr(2, 9),
-            vehicles: [vehicle1.id, vehicle2.id],
-            location: { x: (vehicle1.x + vehicle2.x) / 2, y: (vehicle1.y + vehicle2.y) / 2 },
-            timestamp: Date.now(),
-            directions: [vehicle1.directionName, vehicle2.directionName]
-        };
-
-        this.accidents.push(accident);
-
-        // Stop vehicles involved in accident
-        vehicle1.speed = 0;
-        vehicle2.speed = 0;
-        vehicle1.color = '#8B0000'; // Dark red for accident
-        vehicle2.color = '#8B0000';
-
-        // Emergency response - clear the intersection
-        this.addLog(`💥 ACCIDENT: Vehicles collided at intersection! Emergency response activated`, 'error');
-        this.addLog(`🚨 Accident involves vehicles from ${vehicle1.directionName} and ${vehicle2.directionName}`, 'error');
-
-        // Clear traffic lights to red for safety
-        this.trafficLights.forEach(light => {
-            light.state = 'red';
-        });
-
-        // Schedule emergency clearing
-        setTimeout(() => {
-            this.clearAccidentVehicles(accident.id);
-        }, 10000); // Clear after 10 seconds
-    }
-
-    clearAccidentVehicles(accidentId) {
-        const accident = this.accidents.find(acc => acc.id === accidentId);
-        if (accident) {
-            // Remove accident vehicles
-            this.vehicles = this.vehicles.filter(vehicle => 
-                !accident.vehicles.includes(vehicle.id)
-            );
-
-            this.addLog(`🚑 Accident cleared - normal traffic flow resuming`, 'success');
-            
-            // Resume normal traffic light operation
-            this.trafficLights[this.currentGreenIndex].state = 'green';
-        }
-    }
-
-    isVehicleInIntersection(vehicle) {
-        const intersectionBounds = {
-            minX: this.centerX - this.roadWidth / 2,
-            maxX: this.centerX + this.roadWidth / 2,
-            minY: this.centerY - this.roadWidth / 2,
-            maxY: this.centerY + this.roadWidth / 2
-        };
-
-        return vehicle.x >= intersectionBounds.minX && 
-               vehicle.x <= intersectionBounds.maxX &&
-               vehicle.y >= intersectionBounds.minY && 
-               vehicle.y <= intersectionBounds.maxY;
-    }
-
-    isSameDirection(vehicle1, vehicle2) {
-        return vehicle1.direction === vehicle2.direction;
-    }
-
-    isVehicleAhead(vehicle1, vehicle2) {
-        switch (vehicle1.direction) {
-            case 0: return vehicle1.y < vehicle2.y; // North
-            case 1: return vehicle1.x > vehicle2.x; // East
-            case 2: return vehicle1.y > vehicle2.y; // South
-            case 3: return vehicle1.x < vehicle2.x; // West
-            default: return false;
-        }
     }
 
     updateTrafficLights(deltaTime) {
@@ -476,9 +172,6 @@ class TrafficSimulation {
         this.trafficLights.forEach((light, index) => {
             light.carCount = this.countVehiclesWaiting(index);
         });
-
-        // Apply ML predictions to traffic light behavior
-        this.applyMLPredictions();
 
         // Check for emergency vehicles
         const emergencyDirection = this.checkEmergencyVehicles();
@@ -491,9 +184,10 @@ class TrafficSimulation {
         // Update current light timer
         this.lightChangeTime += deltaTime;
 
-        // Dynamic green time based on vehicle count and ML predictions
+        // Dynamic green time based on vehicle count
         const currentLight = this.trafficLights[this.currentGreenIndex];
-        let greenDuration = this.calculateOptimalGreenDuration(currentLight);
+        let greenDuration = this.minGreenTime + (currentLight.carCount * 1000);
+        greenDuration = Math.min(greenDuration, this.maxGreenTime);
 
         // Check if we should switch to yellow
         if (currentLight.state === 'green' && this.lightChangeTime >= greenDuration) {
@@ -511,42 +205,11 @@ class TrafficSimulation {
         }
     }
 
-    applyMLPredictions() {
-        // Adjust traffic light weights based on ML predictions
-        if (this.currentPredictedScheduling === 'Priority Scheduling') {
-            // Prioritize directions with more vehicles
-            this.trafficLights.forEach(light => {
-                light.mlWeight = 1.0 + (light.carCount * 0.2);
-            });
-        } else if (this.currentPredictedScheduling === 'Shortest Job First') {
-            // Favor directions with fewer vehicles to clear backlog
-            const maxCars = Math.max(...this.trafficLights.map(l => l.carCount));
-            this.trafficLights.forEach(light => {
-                light.mlWeight = maxCars - light.carCount + 0.5;
-            });
-        } else {
-            // Round Robin - equal weights
-            this.trafficLights.forEach(light => {
-                light.mlWeight = 1.0;
-            });
-        }
-    }
-
-    calculateOptimalGreenDuration(light) {
-        const baseTime = this.minGreenTime;
-        const carBonus = light.carCount * 1000;
-        const mlBonus = light.mlWeight * 1000;
-        const emergencyBonus = this.vehicles.some(v => v.isEmergency && v.direction === this.currentGreenIndex) ? 3000 : 0;
-        
-        return Math.min(this.maxGreenTime, baseTime + carBonus + mlBonus + emergencyBonus);
-    }
-
     countVehiclesWaiting(direction) {
         let count = 0;
         this.vehicles.forEach(vehicle => {
             if (vehicle.direction === direction && vehicle.stopped) {
                 count++;
-                vehicle.waitTime += 16.67; // Approximate frame time
             }
         });
         return count;
@@ -584,61 +247,30 @@ class TrafficSimulation {
     switchToNextDirection() {
         this.trafficLights[this.currentGreenIndex].state = 'red';
 
-        // Use ML-enhanced direction selection
-        let nextDirection = this.selectOptimalDirection();
+        // Find next direction with most vehicles or cycle through
+        let nextDirection = (this.currentGreenIndex + 1) % 4;
+        let maxCars = 0;
+        let bestDirection = nextDirection;
 
-        this.currentGreenIndex = nextDirection;
+        for (let i = 0; i < 4; i++) {
+            if (this.trafficLights[i].carCount > maxCars) {
+                maxCars = this.trafficLights[i].carCount;
+                bestDirection = i;
+            }
+        }
+
+        // Use best direction if it has waiting vehicles, otherwise cycle
+        this.currentGreenIndex = maxCars > 0 ? bestDirection : nextDirection;
         this.trafficLights[this.currentGreenIndex].state = 'green';
         this.lightChangeTime = 0;
 
-        const light = this.trafficLights[this.currentGreenIndex];
-        this.addLog(`💚 Switched to ${light.direction} (${light.carCount} vehicles, ML weight: ${light.mlWeight.toFixed(1)})`);
-    }
-
-    selectOptimalDirection() {
-        // Calculate scores for each direction based on vehicles, ML weight, and emergency status
-        let bestDirection = (this.currentGreenIndex + 1) % 4;
-        let bestScore = 0;
-
-        this.trafficLights.forEach((light, index) => {
-            if (index === this.currentGreenIndex) return; // Skip current green
-
-            let score = light.carCount * light.mlWeight;
-            
-            // Emergency vehicle bonus
-            if (this.vehicles.some(v => v.isEmergency && v.direction === index)) {
-                score += 100;
-            }
-
-            // Waiting time bonus
-            const avgWaitTime = this.getAverageWaitTime(index);
-            score += avgWaitTime / 1000;
-
-            if (score > bestScore) {
-                bestScore = score;
-                bestDirection = index;
-            }
-        });
-
-        return bestDirection;
-    }
-
-    getAverageWaitTime(direction) {
-        const waitingVehicles = this.vehicles.filter(v => v.direction === direction && v.stopped);
-        if (waitingVehicles.length === 0) return 0;
-        
-        return waitingVehicles.reduce((sum, v) => sum + v.waitTime, 0) / waitingVehicles.length;
+        this.addLog(`💚 Switched to ${this.trafficLights[this.currentGreenIndex].direction} (${maxCars} vehicles waiting)`);
     }
 
     updateVehicles(deltaTime) {
         // Use reverse iteration to safely remove vehicles
         for (let i = this.vehicles.length - 1; i >= 0; i--) {
             const vehicle = this.vehicles[i];
-
-            // Skip accident vehicles
-            if (vehicle.speed === 0 && vehicle.color === '#8B0000') {
-                continue;
-            }
 
             // Check if vehicle should stop at red light
             const light = this.trafficLights[vehicle.direction];
@@ -663,21 +295,9 @@ class TrafficSimulation {
             }
         }
 
-        // Update waiting count and efficiency
+        // Update waiting count
         this.stats.currentWaiting = this.vehicles.filter(v => v.stopped).length;
-        this.updateTrafficEfficiency();
         this.updateStats();
-    }
-
-    updateTrafficEfficiency() {
-        const totalVehicles = this.stats.totalVehicles || 1;
-        const passedRatio = this.stats.vehiclesPassed / totalVehicles;
-        const violationPenalty = this.stats.ruleViolations * 2;
-        const accidentPenalty = this.stats.accidents * 10;
-        
-        this.stats.trafficEfficiency = Math.max(0, Math.min(100, 
-            (passedRatio * 100) - violationPenalty - accidentPenalty
-        ));
     }
 
     shouldVehicleStop(vehicle, light) {
@@ -716,9 +336,6 @@ class TrafficSimulation {
 
         // Draw vehicles
         this.drawVehicles();
-
-        // Draw accident markers
-        this.drawAccidents();
 
         // Draw UI elements
         this.drawUI();
@@ -821,18 +438,17 @@ class TrafficSimulation {
             this.ctx.strokeText(light.direction.toUpperCase(), light.x, light.y - 65);
             this.ctx.fillText(light.direction.toUpperCase(), light.x, light.y - 65);
 
-            // Vehicle count and ML weight
+            // Vehicle count
             this.ctx.fillStyle = '#3498db';
             this.ctx.font = '10px Arial';
             this.ctx.fillText(`🚗 ${light.carCount}`, light.x, light.y + 35);
-            this.ctx.fillText(`ML: ${light.mlWeight.toFixed(1)}`, light.x, light.y + 47);
         });
     }
 
     drawTimer(light, index) {
         let timeRemaining;
         if (light.state === 'green') {
-            const greenDuration = this.calculateOptimalGreenDuration(light);
+            const greenDuration = this.minGreenTime + (light.carCount * 1000);
             timeRemaining = Math.max(0, greenDuration - this.lightChangeTime);
         } else if (light.state === 'yellow') {
             timeRemaining = Math.max(0, this.yellowTime - light.timer);
@@ -883,62 +499,29 @@ class TrafficSimulation {
                 this.ctx.fillText('EMG', 0, 2);
             }
 
-            // Rule violation indicator
-            if (vehicle.hasViolatedRules) {
-                this.ctx.fillStyle = '#ff6b6b';
-                this.ctx.beginPath();
-                this.ctx.arc(0, -vehicle.height/2 - 5, 3, 0, Math.PI * 2);
-                this.ctx.fill();
-            }
-
             this.ctx.restore();
         });
     }
 
-    drawAccidents() {
-        this.accidents.forEach(accident => {
-            this.ctx.fillStyle = '#ff0000';
-            this.ctx.font = 'bold 16px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText('💥', accident.location.x, accident.location.y);
-            
-            // Accident warning
-            this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = 'bold 10px Arial';
-            this.ctx.fillText('ACCIDENT', accident.location.x, accident.location.y + 15);
-        });
-    }
-
     drawUI() {
-        // Current green indicator with ML prediction
+        // Current green indicator
         const currentLight = this.trafficLights[this.currentGreenIndex];
         this.ctx.fillStyle = 'rgba(46, 204, 113, 0.9)';
-        this.ctx.fillRect(10, 10, 300, 60);
+        this.ctx.fillRect(10, 10, 200, 40);
         this.ctx.fillStyle = '#ffffff';
         this.ctx.font = 'bold 16px Arial';
         this.ctx.textAlign = 'left';
         this.ctx.fillText(`🟢 GREEN: ${currentLight.direction}`, 20, 35);
-        this.ctx.font = '12px Arial';
-        this.ctx.fillText(`🤖 ML Prediction: ${this.currentPredictedScheduling}`, 20, 55);
-
-        // Safety metrics
-        this.ctx.fillStyle = 'rgba(231, 76, 60, 0.9)';
-        this.ctx.fillRect(10, 80, 300, 60);
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = 'bold 14px Arial';
-        this.ctx.fillText(`🚔 Violations: ${this.stats.ruleViolations}`, 20, 100);
-        this.ctx.fillText(`💥 Accidents: ${this.stats.accidents}`, 20, 120);
-        this.ctx.fillText(`⚡ Efficiency: ${this.stats.trafficEfficiency.toFixed(1)}%`, 150, 100);
 
         // Instructions
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        this.ctx.fillRect(10, this.canvasHeight - 80, 350, 70);
+        this.ctx.fillRect(10, this.canvasHeight - 80, 300, 70);
         this.ctx.fillStyle = '#ecf0f1';
         this.ctx.font = '12px Arial';
         this.ctx.fillText('Controls:', 20, this.canvasHeight - 60);
         this.ctx.fillText('5-8 - Emergency Vehicle (N/E/S/W)', 20, this.canvasHeight - 45);
         this.ctx.fillText('1-4 - Spawn Vehicle (N/E/S/W)', 20, this.canvasHeight - 30);
-        this.ctx.fillText('🤖 AI Model: Auto-training & predicting every 5-10s', 20, this.canvasHeight - 15);
+        this.ctx.fillText('Auto-spawn enabled during simulation', 20, this.canvasHeight - 15);
     }
 
     updateStats() {
@@ -950,7 +533,7 @@ class TrafficSimulation {
         const container = document.getElementById('intersections');
         container.innerHTML = `
             <div class="stat-summary">
-                <h3>🚦 Live Traffic Status with AI</h3>
+                <h3>🚦 Live Traffic Status</h3>
                 <div class="traffic-stats">
                     <div class="stat-item">
                         <span class="stat-label">Vehicles Passed:</span>
@@ -968,45 +551,16 @@ class TrafficSimulation {
                         <span class="stat-label">Active Green:</span>
                         <span class="stat-value green-indicator">${this.trafficLights[this.currentGreenIndex].direction}</span>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-label">🤖 ML Predictions:</span>
-                        <span class="stat-value">${this.stats.mlPredictions}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">🚔 Rule Violations:</span>
-                        <span class="stat-value">${this.stats.ruleViolations}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">💥 Accidents:</span>
-                        <span class="stat-value">${this.stats.accidents}</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">⚡ Efficiency:</span>
-                        <span class="stat-value">${this.stats.trafficEfficiency.toFixed(1)}%</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">🔮 Current Prediction:</span>
-                        <span class="stat-value">${this.currentPredictedScheduling}</span>
-                    </div>
                 </div>
             </div>
         `;
     }
 
-    async gameLoop(currentTime) {
+    gameLoop(currentTime) {
         if (!this.isRunning) return;
 
         const deltaTime = currentTime - (this.lastTime || currentTime);
         this.lastTime = currentTime;
-
-        // ML Integration - Log data, train model, get predictions
-        await this.logDataToCSV(currentTime);
-        await this.trainMLModel(currentTime);
-        await this.getPrediction(currentTime);
-
-        // Safety systems
-        this.detectRuleViolations();
-        this.detectAndPreventAccidents();
 
         // Auto-spawn vehicles
         if (currentTime - this.lastSpawnTime > this.spawnRate) {
@@ -1038,8 +592,7 @@ class TrafficSimulation {
         document.getElementById('startBtn').disabled = true;
         document.getElementById('stopBtn').disabled = false;
 
-        this.addLog('🚀 Starting smart traffic simulation with AI integration...', 'success');
-        this.addLog('🤖 ML model will train every 5 seconds and predict every 10 seconds', 'success');
+        this.addLog('🚀 Starting smart traffic simulation...', 'success');
         this.lastTime = performance.now();
         this.gameLoop(this.lastTime);
     }
@@ -1065,46 +618,27 @@ class TrafficSimulation {
         // Reset all state
         this.vehicles = [];
         this.emergencyVehicles = [];
-        this.ruleViolations = [];
-        this.accidents = [];
         this.stats = {
             totalVehicles: 0,
             vehiclesPassed: 0,
             emergencyVehicles: 0,
-            currentWaiting: 0,
-            ruleViolations: 0,
-            accidents: 0,
-            mlPredictions: 0,
-            averageWaitTime: 0,
-            trafficEfficiency: 100
+            currentWaiting: 0
         };
-
-        // Reset counters
-        this.redLightViolations = 0;
-        this.speedingViolations = 0;
-        this.accidentCount = 0;
 
         // Reset traffic lights
         this.trafficLights.forEach((light, index) => {
             light.state = index === 0 ? 'green' : 'red';
             light.timer = 0;
             light.carCount = 0;
-            light.mlWeight = 1.0;
         });
         this.currentGreenIndex = 0;
         this.lightChangeTime = 0;
-
-        // Reset ML timers
-        this.lastDataLogTime = 0;
-        this.lastTrainingTime = 0;
-        this.lastPredictionTime = 0;
-        this.currentPredictedScheduling = 'Round Robin';
 
         this.updateStats();
         this.draw();
 
         document.getElementById('logContainer').innerHTML = '';
-        this.addLog('🔄 System reset completed - AI model reset', 'success');
+        this.addLog('🔄 System reset completed', 'success');
     }
 
     addLog(message, type = 'info') {
@@ -1132,17 +666,17 @@ class TrafficSimulation {
         logContainer.appendChild(logEntry);
         logContainer.scrollTop = logContainer.scrollHeight;
 
-        // Keep only last 20 log entries
-        while (logContainer.children.length > 20) {
+        // Keep only last 15 log entries
+        while (logContainer.children.length > 15) {
             logContainer.removeChild(logContainer.firstChild);
         }
     }
 
     findSafeSpawnPosition(direction) {
         const vehiclesInDirection = this.vehicles.filter(v => v.direction === direction);
-        if (vehiclesInDirection.length === 0) return { safe: true, offset: 0 };
+        if (vehiclesInDirection.length === 0) return 0;
 
-        // Check for safe spawning distance
+        // Find the furthest vehicle in spawn area
         let maxOffset = 0;
         for (let vehicle of vehiclesInDirection) {
             let offset = 0;
@@ -1171,11 +705,7 @@ class TrafficSimulation {
             maxOffset = Math.max(maxOffset, offset);
         }
 
-        const safeDistance = 35;
-        return {
-            safe: vehiclesInDirection.length < 10, // Max 10 vehicles per direction
-            offset: maxOffset + safeDistance
-        };
+        return maxOffset + 35; // Add safe distance
     }
 }
 
