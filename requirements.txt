@@ -43,6 +43,3 @@ threading>=3.11.0
 # System Integration
 psutil>=5.9.0
 schedule>=1.2.0
-numpy
-pandas
-scikit-learn

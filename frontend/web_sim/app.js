@@ -115,10 +115,9 @@ class TrafficSimulation {
         });
     }
 
-    spawnVehicle(direction, movement = 'straight') {
+    spawnVehicle(direction) {
         const directions = ['North', 'East', 'South', 'West'];
         const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6'];
-        const movements = ['straight', 'left', 'right'];
 
         // Check for safe spawning position to prevent immediate collisions
         const safePosition = this.findSafeSpawnPosition(direction);
@@ -127,77 +126,36 @@ class TrafficSimulation {
             return;
         }
 
-        // If no movement specified, randomly choose one
-        if (movement === 'random') {
-            movement = movements[Math.floor(Math.random() * movements.length)];
-        }
-
         let startX, startY, targetX, targetY, angle;
 
         switch(direction) {
             case 0: // North (coming from south)
                 startX = this.centerX - 15;
                 startY = this.canvasHeight + safePosition.offset;
+                targetX = this.centerX - 15;
+                targetY = -30;
                 angle = -Math.PI / 2;
-                
-                if (movement === 'straight') { // North to South
-                    targetX = this.centerX - 15;
-                    targetY = -30;
-                } else if (movement === 'right') { // North to East
-                    targetX = this.canvasWidth + 30;
-                    targetY = this.centerY - 15;
-                } else { // North to West
-                    targetX = -30;
-                    targetY = this.centerY + 15;
-                }
                 break;
             case 1: // East (coming from west)
                 startX = -30 - safePosition.offset;
                 startY = this.centerY - 15;
+                targetX = this.canvasWidth + 30;
+                targetY = this.centerY - 15;
                 angle = 0;
-                
-                if (movement === 'straight') { // East to West
-                    targetX = this.canvasWidth + 30;
-                    targetY = this.centerY - 15;
-                } else if (movement === 'right') { // East to South
-                    targetX = this.centerX + 15;
-                    targetY = this.canvasHeight + 30;
-                } else { // East to North
-                    targetX = this.centerX - 15;
-                    targetY = -30;
-                }
                 break;
             case 2: // South (coming from north)
                 startX = this.centerX + 15;
                 startY = -30 - safePosition.offset;
+                targetX = this.centerX + 15;
+                targetY = this.canvasHeight + 30;
                 angle = Math.PI / 2;
-                
-                if (movement === 'straight') { // South to North
-                    targetX = this.centerX + 15;
-                    targetY = this.canvasHeight + 30;
-                } else if (movement === 'right') { // South to West
-                    targetX = -30;
-                    targetY = this.centerY + 15;
-                } else { // South to East
-                    targetX = this.canvasWidth + 30;
-                    targetY = this.centerY - 15;
-                }
                 break;
             case 3: // West (coming from east)
                 startX = this.canvasWidth + 30 + safePosition.offset;
                 startY = this.centerY + 15;
+                targetX = -30;
+                targetY = this.centerY + 15;
                 angle = Math.PI;
-                
-                if (movement === 'straight') { // West to East
-                    targetX = -30;
-                    targetY = this.centerY + 15;
-                } else if (movement === 'right') { // West to North
-                    targetX = this.centerX - 15;
-                    targetY = -30;
-                } else { // West to South
-                    targetX = this.centerX + 15;
-                    targetY = this.canvasHeight + 30;
-                }
                 break;
         }
 
@@ -208,7 +166,6 @@ class TrafficSimulation {
             targetY: targetY,
             direction: direction,
             directionName: directions[direction],
-            movement: movement,
             speed: Math.max(0.5, Math.min(this.speedLimit, 1.5 + Math.random() * 0.5)),
             originalSpeed: 1.5 + Math.random() * 0.5,
             color: colors[Math.floor(Math.random() * colors.length)],
@@ -468,7 +425,7 @@ class TrafficSimulation {
         // Schedule emergency clearing
         setTimeout(() => {
             this.clearAccidentVehicles(accident.id);
-        }, 400); // Clear after 0.4 seconds
+        }, 10000); // Clear after 10 seconds
     }
 
     clearAccidentVehicles(accidentId) {
@@ -1054,7 +1011,7 @@ class TrafficSimulation {
         // Auto-spawn vehicles
         if (currentTime - this.lastSpawnTime > this.spawnRate) {
             const direction = Math.floor(Math.random() * 4);
-            this.spawnVehicle(direction, 'random');
+            this.spawnVehicle(direction);
             this.lastSpawnTime = currentTime;
         }
 

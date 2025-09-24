@@ -1,4 +1,3 @@
-
 # Smart Traffic Management Simulation
 
 A comprehensive AI-powered traffic control system developed for the Smart India Hackathon. This project demonstrates intelligent traffic management through real-time vehicle detection, machine learning-based optimization, and dynamic traffic light control using computer vision, reinforcement learning, and web-based visualization.
@@ -20,48 +19,6 @@ A comprehensive AI-powered traffic control system developed for the Smart India 
 ### System Dependencies (for Pygame)
 - SDL2 development libraries
 - Audio and graphics libraries
-
-## 🔧 Programming Languages Used
-
-### Primary Languages
-- **JavaScript (ES6+)**: Frontend simulation, real-time canvas rendering, API communication
-- **Python 3.11+**: Machine learning models, data processing, backend algorithms
-- **HTML5**: Structure and Canvas API for graphics rendering
-- **CSS3**: Responsive design, animations, and visual styling
-
-### Configuration Languages
-- **JSON**: Package configuration and data exchange
-- **Markdown**: Documentation and project descriptions
-
-## 📦 Modules and Packages Used
-
-### Python Packages
-- **pandas**: Data manipulation and CSV file handling for ML training data
-- **scikit-learn**: Machine learning algorithms including RandomForestClassifier
-- **numpy**: Numerical computing for traffic flow calculations
-- **pygame**: Game development library for traffic simulation rendering and physics
-- **flask**: Web framework for API endpoints (planned integration)
-- **opencv-python**: Computer vision for vehicle detection (planned)
-- **tensorflow**: Deep learning framework (planned for advanced ML)
-- **pytest**: Testing framework for quality assurance
-
-### Node.js Packages
-- **express**: Web server framework for API endpoints and static file serving
-- **socket.io**: Real-time bidirectional communication (planned)
-- **cors**: Cross-Origin Resource Sharing middleware
-- **body-parser**: HTTP request body parsing middleware
-
-### Frontend Technologies
-- **HTML5 Canvas API**: 2D graphics rendering for traffic simulation
-- **JavaScript Fetch API**: HTTP requests for ML model communication
-- **CSS Grid/Flexbox**: Modern layout techniques
-- **Web Workers**: Background processing (planned)
-
-### Development Tools
-- **npm**: Node.js package manager
-- **pip**: Python package installer
-- **Git**: Version control system
-- **VS Code**: Integrated development environment
 
 ## 🚀 Setup Instructions for VS Code
 
@@ -99,13 +56,17 @@ brew install freetype portmidi jpeg libpng
 
 ### 3. Install Python Dependencies
 ```bash
+# Create and activate virtual environment (recommended)
+python3 -m venv traffic_env
+source traffic_env/bin/activate  # On Windows: traffic_env\Scripts\activate
+
 # Install Python packages
-pip install pandas scikit-learn numpy pygame flask opencv-python tensorflow pytest
+pip install -r requirements.txt
 ```
 
 ### 4. Install Node.js Dependencies
 ```bash
-npm install express cors body-parser
+npm install
 ```
 
 ### 5. Project Structure
@@ -129,11 +90,6 @@ smart-traffic-sim/
 │   ├── flask_app/
 │   │   ├── app.py
 │   │   └── rl_agent.py
-├── model_training/
-│   ├── data.csv
-│   ├── tain_model.py
-│   ├── predict_scheduling.py
-│   └── traffic_scheduler_model.pkl
 ├── models/
 │   ├── yolov8/
 │   └── checkpoints/
@@ -174,6 +130,36 @@ python app.py
    - "Start Traffic Simulation"
    - "Start Both Services"
 
+### Method 3: Using Package Scripts
+```bash
+# Start web server only
+npm run start
+
+# Start development mode
+npm run dev
+```
+
+### Method 4: Testing the Scheduling System
+```bash
+# Run the scheduling algorithm tests
+cd backend/flask_app
+python -m pytest ../../tests/test_schedulers.py -v
+
+# Test individual scheduling algorithms
+python -c "
+from schedulers import TrafficScheduler, IntersectionState, SchedulingPolicy
+scheduler = TrafficScheduler()
+state = IntersectionState(
+    queues={'N': 5, 'E': 3, 'S': 2, 'W': 4},
+    waiting_times={'N': [10,15,20,25,30], 'E': [5,8,12], 'S': [7,9], 'W': [18,22,25,28]},
+    arrival_rates={'N': 0.1, 'E': 0.05, 'S': 0.03, 'W': 0.08},
+    emergency=[], current_phase='NS_green', sim_time=100.0
+)
+plan = scheduler.schedule(state, SchedulingPolicy.META)
+print('Generated schedule:', [f'{p.phase}: {p.duration}s' for p in plan])
+"
+```
+
 ## 🎯 Usage Instructions
 
 ### Web Interface
@@ -189,13 +175,10 @@ python app.py
 - **ESC**: Exit simulation
 
 ### Features
-- **12-Direction Vehicle Movement**: Support for straight, left turn, and right turn from each direction
 - **Dynamic Traffic Lights**: AI-controlled timing based on vehicle density
 - **Emergency Vehicle Priority**: Automatic green light for emergency vehicles
 - **Real-time Statistics**: Vehicle count, wait times, and flow metrics
-- **Multi-lane Intersection**: 4-way crossroad simulation with turning movements
-- **Machine Learning Predictions**: Traffic pattern analysis and optimization
-- **Safety Systems**: Accident detection and rapid clearing (0.4 seconds)
+- **Multi-lane Intersection**: 4-way crossroad simulation
 
 ## 🔧 Development
 
@@ -217,7 +200,6 @@ python app.py
 - **Reinforcement Learning**: Q-learning for traffic optimization
 - **Computer Vision**: Vehicle detection (YOLOv8 integration planned)
 - **Predictive Analytics**: Traffic flow optimization
-- **Random Forest Classifier**: Traffic scheduling algorithm selection
 
 ### Hardware Integration
 - **Arduino**: Traffic light controller prototype
@@ -229,17 +211,12 @@ python app.py
 ### Frontend (`frontend/web_sim/`)
 - Interactive traffic visualization
 - Real-time dashboard
-- Canvas-based animation with 12-directional vehicle movements
+- Canvas-based animation
 
 ### Backend (`backend/flask_app/`)
 - Pygame traffic simulation
 - AI traffic light controller
 - Vehicle physics engine
-
-### Machine Learning (`model_training/`)
-- Pandas-based data processing
-- Scikit-learn traffic pattern analysis
-- Predictive scheduling algorithms
 
 ### Models (`models/`)
 - YOLOv8 vehicle detection
@@ -255,12 +232,6 @@ python app.py
 
 ### Common Issues
 
-#### Pandas/ML Module Issues:
-```bash
-# Install required Python packages
-pip install pandas scikit-learn numpy
-```
-
 #### Pygame Installation Issues:
 ```bash
 # If pygame fails to install, try:
@@ -274,6 +245,12 @@ sudo apt install python3-pygame
 # Kill process using port 5000
 sudo lsof -t -i tcp:5000 | xargs kill -9
 # Or change port in server.js
+```
+
+#### SDL2 Errors on Linux:
+```bash
+# Install additional SDL2 packages
+sudo apt install libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 libsdl2-ttf-2.0-0
 ```
 
 ## 📝 License
@@ -295,9 +272,12 @@ For questions and support, please refer to the documentation in the `docs/` dire
 ---
 **Smart India Hackathon 2024** | AI-Powered Traffic Management Solution
 
-**Complete Technology Stack**:
-- **Languages**: Python, JavaScript, HTML5, CSS3, JSON, Markdown
-- **Python Packages**: pandas, scikit-learn, numpy, pygame, flask, opencv-python, tensorflow, pytest
-- **Node.js Packages**: express, cors, body-parser, socket.io
-- **Web APIs**: Canvas API, Fetch API, Web Workers
-- **Tools**: Git, npm, pip, VS Code
+**Languages Used**:
+- Python
+- JavaScript
+- HTML
+- CSS
+
+**Packages Used**:
+- **Python**: pygame, flask, numpy, opencv-python, tensorflow (for potential future ML integration), pytest
+- **JavaScript**: express, socket.io, react (for frontend framework, if applicable)
